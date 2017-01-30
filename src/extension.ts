@@ -1,9 +1,3 @@
-/*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
- *--------------------------------------------------------*/
-
-'use strict';
-
 import * as vscode from 'vscode';
 
 const initialConfigurations = {
@@ -20,22 +14,13 @@ const initialConfigurations = {
 
 export function activate(context: vscode.ExtensionContext) {
 
-	let disposable = vscode.commands.registerCommand('extension.mock-debug.getProgramName', config => {
+	const disposable = vscode.commands.registerCommand('extension.mock-debug.getProgramName', config => {
 		return vscode.window.showInputBox({
 			placeHolder: "Please enter the name of a markdown file in the workspace folder",
 			value: "readme.md"
 		});
 	});
 	context.subscriptions.push(disposable);
-
-	context.subscriptions.push(vscode.commands.registerCommand('extension.mock-debug.provideInitialConfigurations', () => {
-		return [
-			'// Use IntelliSense to learn about possible Mock debug attributes.',
-			'// Hover to view descriptions of existing attributes.',
-			JSON.stringify(initialConfigurations, null, '\t')
-		].join('\n');
-	}));
 }
 
-export function deactivate() {
-}
+export function deactivate() { }

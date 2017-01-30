@@ -1,8 +1,59 @@
-// Place your settings in this file to overwrite default and user settings.FALSE
 {
-	"javascript.validate.enable": false,
-	"typescript.tsdk": "node_modules/typescript/lib",
-	"files.trimTrailingWhitespace": true,
-	"eslint.enable": false,
-	"editor.insertSpaces": false
+    ////--> Editor Typography <--//////////////////////////////////////////////////////////////////
+    "editor.tabSize": 4,
+    "editor.fontSize": 15,
+    "editor.fontWeight": "500",
+    "editor.fontLigatures": true,
+    "editor.fontFamily": "Fira Code",
+    "editor.cursorBlinking": "expand",
+    "editor.detectIndentation": false,
+    "editor.renderWhitespace": "boundary",
+    "terminal.integrated.fontFamily": "Fira Code",
+    ////--> Editor Features <--////////////////////////////////////////////////////////////////////
+    "window.showFullPath": true,
+    "cSpell.showStatus": false,
+    "editor.lineNumbers": "on",
+    "editor.glyphMargin": true,
+    "problems.autoReveal": true,
+    "explorer.openEditors.visible": 0,
+    "workbench.editor.showTabs": true,
+    "editor.selectionHighlight": true,
+    "diffEditor.renderSideBySide": true,
+    "telemetry.enableTelemetry": true,
+    "telemetry.enableCrashReporter": true,
+    ////--> File Encoding/ <--/////////////////////////////////////////////////////////////////////
+    "files.eol": "\n",
+    "files.encoding": "utf8",
+    "files.trimTrailingWhitespace": true,
+    ////--> Git <--////////////////////////////////////////////////////////////////////////////////
+    "git.autofetch": false,
+    "git.enableLongCommitWarning": false,
+    "better-merge.enableDecorations": true,
+    ////--> Language Server <--////////////////////////////////////////////////////////////////////
+    "tslint.enable": true,
+    "typescript.validate.enable": true,
+    ////--> Debug <--//////////////////////////////////////////////////////////////////////////////
+    "debug.allowBreakpointsEverywhere": true,
+    "debug.inlineValues": true,
+    ////--> Code Completion <--////////////////////////////////////////////////////////////////////
+    "javascript.validate.enable": true,
+    "editor.quickSuggestions": true,
+    "editor.wordBasedSuggestions": false,
+    "editor.snippetSuggestions": "bottom",
+    "typescript.useCodeSnippetsOnMethodSuggest": false,
+    ////--> Code Formatting <--////////////////////////////////////////////////////////////////////
+    "editor.formatOnType": true,
+    "editor.insertSpaces": true,
+    "editor.parameterHints": true,
+
+    "editor.autoClosingBrackets": true,
+    "typescript.format.enable": true,
+    "javascript.format.enable": true,
+    "typescript.format.insertSpaceAfterCommaDelimiter": true,
+    "javascript.format.insertSpaceAfterCommaDelimiter": true,
+    "typescript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+    "javascript.format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+    ////--> Documentation <--//////////////////////////////////////////////////////////////////////
+    "docthis.includeTypes": true,
+    "docthis.automaticForBlockComments": true
 }

@@ -1,11 +1,48 @@
 {
-	"version": "0.1.0",
-	"command": "npm",
-	"isShellCommand": true,
-	"isWatching": true,
-	"showOutput": "always",
-	"args": [
-		"run", "watch"
-	],
-	"problemMatcher": "$tsc-watch"
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    ///////////////////////////////////////////////////////////////////////
+    /// setup task launchers
+    ///////////////////////////////////////////////////////////////////////
+    "command": "npm",
+    "isShellCommand": true,
+    "options": {
+        "cwd": "${workspaceRoot}"
+    },
+    ///////////////////////////////////////////////////////////////////////
+    /// control output
+    ///////////////////////////////////////////////////////////////////////
+    "showOutput": "always",
+    //"echoCommand": false,
+    "suppressTaskName": true,
+    ///////////////////////////////////////////////////////////////////////
+    /// tasks
+    ///////////////////////////////////////////////////////////////////////
+    "tasks": [
+        {
+            "taskName": "build",
+            "echoCommand": true,
+            "args": ["run", "build"],
+            "isBuildCommand": true,
+            "problemMatcher": [
+                "$tsc"
+            ]
+        },
+        {
+            "taskName": "build:watch",
+            "echoCommand": true,
+            "args": ["run", "build:watch"],
+            "isBuildCommand": true,
+            "problemMatcher": [
+                "$tsc-watch"
+            ]
+        },
+        {
+            "taskName": "test",
+            "echoCommand": true,
+            "args": ["run", "test"],
+            "isTestCommand": true
+        }
+    ]
 }

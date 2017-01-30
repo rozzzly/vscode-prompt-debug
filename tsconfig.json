@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "preserveConstEnums": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": true,
+    "diagnostics": true,
+    "noImplicitAny": true,
+    "allowSyntheticDefaultImports": false,
+    "removeComments": false,
+    "newLine": "LF",
+    "pretty": true,
+    "lib": ["es2017", "dom"],
+    "outDir": "out"
+  },
+  "exclude": [
+    "node_modules",
+    "bin"
+  ],
+  "typeAcquisition": {
+      "enable": true
+  }
+}
