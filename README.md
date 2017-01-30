@@ -1,6 +1,6 @@
 # VS Prompt Debug
 
-Extension that allows you quickly launch a vscode debug session.
+Extension that allows you quickly launch a vscode debug session for a file of your choosing.
 Offers two commands:
   - Debug Current File
   - Debug File

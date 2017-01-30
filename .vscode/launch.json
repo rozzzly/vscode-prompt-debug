@@ -2,26 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug(node2/launch)",
-            "type": "node2",
+            "name": "Launch Extension",
+            "type": "extensionHost",
             "request": "launch",
-            "program": "${workspaceRoot}/node_modules/ava/profile.js",
-            "cwd": "${workspaceRoot}",
-            "runtimeArgs": [
-
-            ],
-
+            "runtimeExecutable": "${execPath}",
             "args": [
-                "--verbose",
-                "${workspaceRoot}/bin/test/${command.extension.mock-debug.getProgramName}"
+                "--extensionDevelopmentPath=${workspaceRoot}"
             ],
-            "env": {
-                "NODE_ENV": "development"
-            },
-            "smartStep": true,
+            "stopOnEntry": false,
             "sourceMaps": true,
-            "internalConsoleOptions": "openOnSessionStart",
-            "stopOnEntry": false
+
+            "preLaunchTask": "build"
         }
     ]
 }
