@@ -62,6 +62,7 @@ function updateHistory(context: vscode.ExtensionContext, file: string): void {
 }
 
 async function promptForFile(context: vscode.ExtensionContext): Promise<string> {
+
     const previousFiles = context.workspaceState.get<string[]>('history', []);
     const enterFileOption: vscode.QuickPickItem = {
         label: 'Enter Path',
@@ -69,9 +70,11 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
     };
     const activeFile = getActiveFile();
     const activeFileOption: vscode.QuickPickItem = {
-        label: 'Current File',
+        label: 'Active File',
         description: activeFile || ''
     };
+    log(previousFiles);
+
     // setup list of options
     const options: vscode.QuickPickItem[] = [
         enterFileOption,
@@ -134,10 +137,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     log('extension started!');
 
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.prompt, promptForFile));
+
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.resolve, async (): Promise<string> => {
         // if choice is stale/no choice made, re-prompt user.
         if (!launchChoice.file || (Date.now() - launchChoice.timestamp) >= CHOICE_TIMEOUT) {
-            await vscode.commands.executeCommand<string>(COMMAND_IDs.prompt);
+            await vscode.commands.executeCommand<string>(COMMAND_IDs.prompt, context);
         }
         // if a legit choice was made, resolve with it
         if (launchChoice.file && (Date.now() - launchChoice.timestamp) < CHOICE_TIMEOUT) {

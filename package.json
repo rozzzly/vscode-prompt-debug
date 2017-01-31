@@ -43,8 +43,9 @@
     "main": "./out/extension",
     "activationEvents": [
         "onCommand:prompt-debug.resolve",
-        "onCommand:prompt-debug.launchDebugSession",
-        "onCommand:prompt-debug.launchDebugSessionForCurrentFile"
+        "onCommand:prompt-debug.prompt",
+        "onCommand:prompt-debug.resetHistory",
+        "onCommand:prompt-debug.launchSessionForActiveFile"
     ],
     "contributes": {
         "commands": [
@@ -55,6 +56,14 @@
             {
                 "title": "Launch Debug Session",
                 "command": "prompt-debug.prompt"
+            },
+            {
+                "title": "Clear Saved List of Recently Chosen Files",
+                "command": "prompt-debug.resetHistory"
+            },
+            {
+                "title": "Resolve Targeted File for Debug Session",
+                "command": "prompt-debug.resolve"
             }
         ]
     }
