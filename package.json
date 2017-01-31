@@ -50,11 +50,11 @@
         "commands": [
             {
                 "title": "Launch Debug Session For Current File",
-                "command": "prompt-debug.launchDebugSessionForCurrentFile"
+                "command": "prompt-debug.launchSessionForActiveFile"
             },
             {
                 "title": "Launch Debug Session",
-                "command": "prompt-debug.launchDebugSession"
+                "command": "prompt-debug.prompt"
             }
         ]
     }

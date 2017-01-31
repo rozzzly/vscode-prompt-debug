@@ -1,10 +1,10 @@
 {
     ////--> Editor Typography <--//////////////////////////////////////////////////////////////////
     "editor.tabSize": 4,
-    "editor.fontSize": 15,
+    "editor.fontSize": 14,
     "editor.fontWeight": "500",
     "editor.fontLigatures": true,
-    "editor.fontFamily": "Fira Code",
+    "editor.fontFamily": "Hermit",
     "editor.cursorBlinking": "expand",
     "editor.detectIndentation": false,
     "editor.renderWhitespace": "boundary",
