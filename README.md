@@ -2,7 +2,7 @@
 
 Extension that allows you quickly launch a vscode debug session for a file of your choosing.
 
-![example](https://github.com/rozzzly/vscode-prompt-debug/blob/master/img/anim.svg)
+![example](https://github.com/rozzzly/vscode-prompt-debug/blob/master/img/anim.gif)
 
 ### Setup
 
