@@ -2,7 +2,7 @@
     "name": "vscode-prompt-debug",
     "displayName": "VSCode Prompt Debug",
     "version": "0.0.1",
-    "publisher": "rozzzly",
+    "publisher": "rozzzly-dev",
     "description": "Extension that allows you quickly launch a vscode debug session for a file of your choice.",
     "author": {
         "name": "rozzzly",
