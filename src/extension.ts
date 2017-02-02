@@ -45,8 +45,7 @@ function updateHistory(context: vscode.ExtensionContext, file: string): void {
             foundInHistory = true;
             return { ...record, lastUse: Date.now(), uses: record.uses + 1 }; // update stats
         } else return record; // no change
-    }).sort((a, b) => a.lastUse - b.lastUse); // re-sort incase previously used item was selected and needs to be brought to the top
-    /// TODO: ensure that ^ sort ^ direction isn't backwards
+    }).sort((a, b) => b.lastUse - a.lastUse); // re-sort incase previously used item was selected and needs to be brought to the top
 
     // if it's brand new, then insert it at the top
     if (!foundInHistory) {
@@ -63,35 +62,38 @@ function updateHistory(context: vscode.ExtensionContext, file: string): void {
 
 async function promptForFile(context: vscode.ExtensionContext): Promise<string> {
 
-    const previousFiles = context.workspaceState.get<string[]>('history', []);
+    const previousFiles: HistoryRecord[] = context.workspaceState.get<HistoryRecord[] > ('history', []);
     const enterFileOption: vscode.QuickPickItem = {
-        label: 'Enter Path',
-        description: 'Enter a path (relative to the workspace root) to be targeted by the debug session.'
+        label: '------- Enter Path -------',
+        description: '',
+        detail: 'Enter a path (relative to the workspace root) to be targeted by the debug session.'
     };
     const activeFile = getActiveFile();
     const activeFileOption: vscode.QuickPickItem = {
-        label: 'Active File',
-        description: activeFile || ''
+        label: '------- Active File -------',
+        detail: activeFile || '',
+        description: ''
     };
-    log(previousFiles);
+    log('fileHistory', previousFiles);
 
     // setup list of options
     const options: vscode.QuickPickItem[] = [
         enterFileOption,
         activeFile ? activeFileOption : undefined,
-        ...previousFiles.map<vscode.QuickPickItem>(file => ({
-            label: vscode.workspace.asRelativePath(file),
-            description: file
+        ...previousFiles.map<vscode.QuickPickItem>(record => ({
+            label: vscode.workspace.asRelativePath(record.file),
+            description: '',
+            detail: record.file
         }))
     ].filter(opt => !!opt); // filter out active file option if no editor is open
 
     const chosen = await vscode.window.showQuickPick(options, { /**/ });
     if (chosen) {
-        let potentialFile: string = chosen.description;
+        let potentialFile: string = chosen.detail;
         if (chosen === enterFileOption) {
             const result = await vscode.window.showInputBox({
-                prompt: 'path of file to launch debug session for',
-                value: previousFiles.length ? vscode.workspace.asRelativePath(previousFiles[0]) : ''
+                prompt: 'Path of file to launch debug session for.',
+                value: previousFiles.length ? vscode.workspace.asRelativePath(previousFiles[0].file) : ''
             });
             if (result) potentialFile = result;
             else {
@@ -101,8 +103,9 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
         const file = await locateFile(potentialFile);
         if (!file) {
             vscode.window.showErrorMessage('Could not find the specified file.');
-            throw new URIError(`Could not find the specified file: '${file}'`);
+            throw new URIError(`Could not find the specified file: '${potentialFile}'`);
         } else {
+            updateHistory(context, file);
             return file;
         }
     } else {
@@ -142,7 +145,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.resolve, async (): Promise<string> => {
         // if choice is stale/no choice made, re-prompt user.
         if (!launchChoice.file || (Date.now() - launchChoice.timestamp) >= CHOICE_TIMEOUT) {
-            await vscode.commands.executeCommand<string>(COMMAND_IDs.prompt, context);
+            const file = await promptForFile(context);
+            launchChoice.file = file;
+            launchChoice.timestamp = Date.now();
         }
         // if a legit choice was made, resolve with it
         if (launchChoice.file && (Date.now() - launchChoice.timestamp) < CHOICE_TIMEOUT) {
