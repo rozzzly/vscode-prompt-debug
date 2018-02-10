@@ -17,7 +17,7 @@ Example `.vscode/launch.json` snippet:
     "type": "node",
     "request": "launch",
     "name": "Launch Program",
-    "program": "${command.prompt-debug.resolve}",
+    "program": "${command:prompt-debug.resolve}",
     "cwd": "${workspaceRoot}"
 }
 
@@ -45,7 +45,7 @@ Example `.vscode/launch.json` snippet:
 
             "args": [
                 "--verbose",
-                "${command.prompt-debug.resolve}"
+                "${command:prompt-debug.resolve}"
             ],
             "env": {
                 "NODE_ENV": "development"
