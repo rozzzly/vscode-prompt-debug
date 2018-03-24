@@ -19,7 +19,8 @@
   },
   "exclude": [
     "node_modules",
-    "out"
+    "out",
+    ".vscode"
   ],
   "typeAcquisition": {
       "enable": true

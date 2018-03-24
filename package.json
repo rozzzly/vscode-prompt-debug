@@ -25,14 +25,15 @@
         "url": "https://github.com/Microsoft/vscode-prompt-debug/issues"
     },
     "dependencies": {
-        "vscode": "^1.0.3",
-        "fs-extra-promise": "^0.4.1"
+        "decache": "^4.4.0",
+        "fs-extra-promise": "^1.0.1",
+        "ts-node": "^5.0.1",
+        "vscode": "^1.1.14"
     },
     "devDependencies": {
-        "@types/node": "^7.0.4",
-        "@types/fs-extra-promise": "^0.0.31",
-        "typescript": "^2.1.5",
-        "yarn": "^0.19.1"
+        "@types/fs-extra-promise": "^1.0.4",
+        "@types/node": "^9.6.0",
+        "typescript": "^2.7.2"
     },
     "scripts": {
         "prepublish": "node ./node_modules/typescript/bin/tsc -p ./",
@@ -45,9 +46,19 @@
         "onCommand:prompt-debug.resolve",
         "onCommand:prompt-debug.prompt",
         "onCommand:prompt-debug.resetHistory",
-        "onCommand:prompt-debug.launchSessionForActiveFile"
+        "onCommand:prompt-debug.autoResolve"
     ],
     "contributes": {
+        "configuration": {
+            "properties": {
+                "prompt-debug.autoResolveScript": {
+                    "description": "A javascript or typescript file which is exports a function named 'autoResolve' that resolves a file path to run.",
+                    "title": "Auto Resolve Script",
+                    "type": "string",
+                    "required": false
+                }
+            }
+        },
         "commands": [
             {
                 "title": "Launch Debug Session For Current File",
