@@ -2,12 +2,21 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
+import { locateFile, getActiveFile } from './fsTools';
+import autoResolve from './autoResolve';
+
+
+export const CONFIG_PREFIX = 'prompt-debug';
+export const CONFIG_IDs = {
+    autoResolveScript: `${CONFIG_PREFIX}.autoResolveScript`
+};
+
 export const COMMAND_PREFIX = 'prompt-debug';
 export const COMMAND_IDs = {
     resolve: `${COMMAND_PREFIX}.resolve`,
     prompt: `${COMMAND_PREFIX}.prompt`,
     clearHistory: `${COMMAND_PREFIX}.clearHistory`,
-    launchForActiveFile: `${COMMAND_PREFIX}.launchSessionForActiveFile`,
+    autoResolve: `${COMMAND_PREFIX}.autoResolve`,
 };
 const CHOICE_TIMEOUT: number = 333;
 const HISTORY_SIZE: number = 15;
@@ -29,13 +38,6 @@ interface HistoryRecord {
     uses: number;
 }
 
-function getActiveFile(): string | false {
-    if (vscode.window.activeTextEditor) {
-        return vscode.window.activeTextEditor.document.fileName;
-    } else {
-        return false;
-    }
-}
 
 function updateHistory(context: vscode.ExtensionContext, file: string): void {
     const oldHistory = context.workspaceState.get<HistoryRecord[]>('history', []);
@@ -61,8 +63,7 @@ function updateHistory(context: vscode.ExtensionContext, file: string): void {
 }
 
 async function promptForFile(context: vscode.ExtensionContext): Promise<string> {
-
-    const previousFiles: HistoryRecord[] = context.workspaceState.get<HistoryRecord[] > ('history', []);
+    const previousFiles: HistoryRecord[] = context.workspaceState.get<HistoryRecord[]>('history', []);
     const enterFileOption: vscode.QuickPickItem = {
         label: '------- Enter Path -------',
         description: '',
@@ -79,7 +80,10 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
     // setup list of options
     const options: vscode.QuickPickItem[] = [
         enterFileOption,
-        activeFile ? activeFileOption : undefined,
+        ((activeFile) 
+            ? activeFileOption 
+            : undefined
+        ),
         ...previousFiles.map<vscode.QuickPickItem>(record => ({
             label: vscode.workspace.asRelativePath(record.file),
             description: '',
@@ -112,30 +116,6 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
         throw new Error('User did not make a choice.');
     }
 }
-
-async function locateFile(file: string): Promise<string | false> {
-    if (path.isAbsolute(file)) return await fileExists(file) ? file : false;
-    else {
-        if (file.includes('${workspaceRoot}')) { // allow user to explicitly interpolate ${workspaceRoot}
-            const substituted = file.replace('${workspaceRoot}', vscode.workspace.rootPath);
-            return await fileExists(substituted) ? substituted : false;
-        } else {
-            const joined = path.join(vscode.workspace.rootPath, file); // assume user intended it to be relative to workspace root
-            return await fileExists(joined) ? joined : false;
-        }
-    }
-}
-
-async function fileExists(file: string): Promise<boolean> {
-    if (!file) return false;
-    else {
-        try {
-            return (await fs.statAsync(file)).isFile();
-        } catch (e) {
-            return false;
-        }
-    }
-}
 export function activate(context: vscode.ExtensionContext) {
 
     log('extension started!');
@@ -158,9 +138,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.launchForActiveFile, async (): Promise<string> => {
-        return '';
-    }));
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.clearHistory, () => {
+        context.workspaceState.update('history', []);
+    }))
+
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.autoResolve, autoResolve));
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
