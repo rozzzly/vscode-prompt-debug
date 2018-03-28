@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
-import { locateFile, getActiveFile } from './fsTools';
+import { locate, getActiveFile } from './fsTools';
 import autoResolve from './autoResolve';
 
 
@@ -104,7 +104,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
                 throw new Error('User did not supply a file.');
             }
         }
-        const file = await locateFile(potentialFile);
+        const file = await locate(potentialFile);
         if (!file) {
             vscode.window.showErrorMessage('Could not find the specified file.');
             throw new URIError(`Could not find the specified file: '${potentialFile}'`);
@@ -119,7 +119,8 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
 export function activate(context: vscode.ExtensionContext) {
 
     log('extension started!');
-
+    log(vscode.Uri.file('./'))
+    log(vscode.Uri.file('./package.json'))
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.prompt, promptForFile));
 
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.resolve, async (): Promise<string> => {
