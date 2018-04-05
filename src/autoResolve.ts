@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import { CONFIG_IDs } from './extension';
 import { fileExists, locate, getActiveFile, lastModified } from './fsTools';
 import * as _tsNode from 'ts-node';
+import { substitute } from './substitution';
 
 
 let tsNode: typeof _tsNode | false = null;
+let loadFailed: boolean = false;
 let cacheInfo: { scriptPath: string; timestamp: number; script: AutoResolverScript; } | null = null;
 
 async function ensureTsNode(): Promise<boolean> {
@@ -37,9 +39,10 @@ export interface ResolverContext {
     exists(filePath: string): Promise<boolean>;
 }
 
-export type AutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | false>;
+export type SyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => string | false;
+export type AsyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | false>;
 export interface AutoResolverScript {
-    autoResolve: AutoResolver;
+    autoResolve: SyncAutoResolver | AsyncAutoResolver;
 }
 
 export default async (): Promise<string> => {
@@ -47,27 +50,38 @@ export default async (): Promise<string> => {
     if (activeFile) {
         const cfg: string = vscode.workspace.getConfiguration().get(CONFIG_IDs.autoResolveScript);
         if (typeof cfg === 'string' && cfg.length > 0) {
-            const scriptPath = await locate(cfg);
+            const substituted = await substitute(cfg);
+            const scriptPath = await locate(substituted);
             console.log('scriptPath: ', scriptPath);
-            if (await ensureTsNode()) {
-                console.log('tsNode resolved:', tsNode);
-                if (scriptPath) {
-                    let script: AutoResolverScript | false = false;
-                    try {
-                        if (!cacheInfo) { // first time using this command
-                            script = await import(scriptPath);
-                        } else if (cacheInfo.timestamp === await lastModified(scriptPath)) {
-                            script = cacheInfo.script; // no changes, so dont even bother reloading the script
-                        } else {
-                            decache(scriptPath); // remove any cached versions (so file changes are respected)
-                            script = await import(scriptPath);
+            if (scriptPath) { // check to see if script could be located
+                 if (await ensureTsNode()) {
+                    console.log('tsNode resolved:', tsNode);
+                    let script: AutoResolverScript | null = null;
+                    if (cacheInfo) { // first time using this command
+                        if (loadFailed || cacheInfo.scriptPath === scriptPath && cacheInfo.timestamp !== await lastModified(scriptPath)) {
+                            try {
+                                decache(scriptPath); // remove any cached versions (so file changes are respected)
+                                script = await import(scriptPath);
+                            } catch(e) {
+                                cacheInfo = null;
+                                script = null;
+                                console.log('clearing cache + reload auto resolve script failed', e);
+                            }
+                        } else { // script worked last time no, changes, so dont even bother reloading the script
+                            script = cacheInfo.script;
                         }
-                    } catch(e) {
-                        script = false;
-                        console.log('importing auto resolve script failed', e);
+                    } else {
+                        try {
+                            script = await import(scriptPath);
+                        } catch(e) {
+                            loadFailed = true;
+                            script = null;
+                            console.log('loading auto resolve script failed', e);
+                        }
                     }
                     if (script) {
                         if ('autoResolve' in script && typeof script.autoResolve === 'function') {
+                            loadFailed = false;
                             console.log('autoResolveScript matches expected shape', script);
                             let resolved: string | false = false;
                             try {
@@ -77,24 +91,25 @@ export default async (): Promise<string> => {
                                 console.log('autoResolve func failed:', e);
                             }
                             console.log('resolved value: ', resolved);
+                            cacheInfo = {
+                                script,
+                                scriptPath,
+                                timestamp: await lastModified(scriptPath)
+                            };
                         } else {
+                            loadFailed = true;
                             console.log('autoResolve function not exported by the imported script');
                         }
-                        cacheInfo = {
-                            script,
-                            scriptPath,
-                            timestamp: await lastModified(scriptPath)
-                        };
                     } else {
-                        cacheInfo = null;
+                        loadFailed = true;
                         console.log('autoResolve script could not be required');
                     }
                 } else {
-                    throw new Error('cannot find script');
+                    console.log('tsNode failed to load', );
+                    throw new Error('cant load tsNode!');
                 }
             } else {
-                console.log('tsNode failed to load', );
-                throw new Error('cant load tsNode!');
+                throw new Error('cannot find script');
             }
         } else {
             console.log('cannot auto resolve, no autoResolveScript');

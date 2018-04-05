@@ -1,10 +1,18 @@
 import * as vscode from 'vscode';
-import * as nodeJsPath from 'path';
+import * as path from 'path';
 import * as fs from 'fs-extra-promise';
+import { substitute } from './substitution';
 
 export function getActiveFile(): string | false {
     if (vscode.window.activeTextEditor) {
-        return vscode.window.activeTextEditor.document.fileName;
+        return vscode.window.activeTextEditor.document.uri.fsPath;
+    } else {
+        return false;
+    }
+}
+export function getActiveFileUri(): vscode.Uri | false {
+    if (vscode.window.activeTextEditor) {
+        return vscode.window.activeTextEditor.document.uri;
     } else {
         return false;
     }
@@ -12,7 +20,7 @@ export function getActiveFile(): string | false {
 
 export type LooseUri = string | vscode.Uri;
 
-export function tightenToUri(value: LooseUri): vscode.Uri {
+export function toUri(value: LooseUri): vscode.Uri {
     if (typeof value === 'string') {
         return vscode.Uri.file(value);
     } else {
@@ -20,7 +28,7 @@ export function tightenToUri(value: LooseUri): vscode.Uri {
     }
 }
 
-export function tightenToString(value: LooseUri): string {
+export function toString(value: LooseUri): string {
     if (typeof value === 'string') {
         return value;
     } else {
@@ -28,73 +36,39 @@ export function tightenToString(value: LooseUri): string {
     }
 }
 
-// const areWorkspacesSupported: boolean = 'workspaceFolders' in vscode.workspace;
-
-// export function workspaceRoot(): vscode.Uri | false {
-//     if (!areWorkspacesSupported || !vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) {
-//         return (vscode.workspace.rootPath) ? vscode.workspace.rootPath : false;
-//     } else {
-//         return vscode.workspace.workspaceFolders[0].uri;
-//     }
-    
-// }
-
-// export interface dissectedFilePath {
-//     isDescendantOfRootDir: boolean;
-
-// }
-
-// export function dissectFilePath(filePath: string, rootDir: string): {} {
-
-// }
-
-export interface PathExpander {
-    pattern: (
-        | string
-        | RegExp
-    );
-    replacer: (
-        | (() => string)
-        | (() => Promise<string>)
-    );
+export function relative(filePath: LooseUri, dirPath: LooseUri): string;
+export function relative(_filePath: LooseUri, _dirPath: LooseUri): string {
+    const filePath = toString(_filePath);
+    const dirPath = toString(_dirPath);
+    return path.relative(filePath, dirPath);
 }
 
-/// TODO ::: expand all types of variables and commands like tasks.json
-/// @see https://sourcegraph.com/github.com/Microsoft/vscode/-/blob/src/vs/workbench/parts/debug/electron-browser/debugConfigurationManager.ts#L600:23
-export function expandPath(path: string): string {
-    const tight = tightenToString(path);
-    if (nodeJsPath.isAbsolute(tight)) return tight;
-    else {
-        if (tight.includes('${workspaceRoot}')) { // allow user to interpolate ${workspaceRoot}
-            return tight.replace('${workspaceRoot}', vscode.workspace.rootPath);
-        } else {
-            return nodeJsPath.join(vscode.workspace.rootPath, tight); // assume user intended it to be relative to workspace root
-        }
-    }
-}
+export const areWorkspacesDefined = (): boolean => vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
+export const areWorkspacesSupported = (): boolean => 'workspaceFolders' in vscode.workspace;
+
 
 export async function locate(filePath: LooseUri): Promise<string | false> {
-    const tight = tightenToString(filePath);
-    const expanded = expandPath(tight);
+    const tight = toString(filePath);
+    const expanded = await substitute(tight);
     return await exists(expanded) ? expanded : false;
 }
 
-export async function locateFile(filePath: string): Promise<string | false> {
-    const tight = tightenToString(filePath);
-    const expanded = expandPath(tight);
+export async function locateFile(filePath: LooseUri): Promise<string | false> {
+    const tight = toString(filePath);
+    const expanded = await substitute(tight);
     return await exists(expanded) ? expanded : false;
 }
 
 export async function lastModified(filePath: LooseUri): Promise<number> {
-    const stats = await fs.statAsync(tightenToString(filePath));
+    const stats = await fs.statAsync(toString(filePath));
     return stats.mtimeMs;
 }
 
-export async function fileExists(filePath: string): Promise<boolean> {
-    const tight = tightenToString(filePath);
+export async function fileExists(filePath: LooseUri): Promise<boolean> {
+    const tight = toString(filePath);
     if (!tight) return false;
     else {
-        const expanded = expandPath(tight);
+        const expanded = await substitute(tight);
         try {
             return (await fs.statAsync(expanded)).isFile();
         } catch (e) {
@@ -103,11 +77,11 @@ export async function fileExists(filePath: string): Promise<boolean> {
     }
 }
 
-export async function dirExists(dirPath: string): Promise<boolean> {
-    const tight = tightenToString(dirPath);
+export async function dirExists(dirPath: LooseUri): Promise<boolean> {
+    const tight = toString(dirPath);
     if (!tight) return false;
     else {
-        const expanded = expandPath(tight);
+        const expanded = await substitute(tight);
         try {
             return (await fs.statAsync(expanded)).isDirectory();
         } catch (e) {
@@ -116,11 +90,12 @@ export async function dirExists(dirPath: string): Promise<boolean> {
     }
 }
 
-export async function exists(path: string): Promise<boolean> {
-    const tight = tightenToString(path);
-    if (!path) return false;
+export async function exists(path: LooseUri): Promise<boolean>;
+export async function exists(_path: LooseUri): Promise<boolean> {
+    const tight = toString(_path);
+    if (!tight) return false;
     else {
-        const expanded = expandPath(path);
+        const expanded = await substitute(tight);
         try {
             return !!(await fs.statAsync(expanded));
         } catch (e) {
@@ -129,31 +104,24 @@ export async function exists(path: string): Promise<boolean> {
     }
 }
 
-export function isDescendent(path: string, parentDir: string): boolean {
-    const tightPath = tightenToString(path);
-    const tightParent = tightenToString(parentDir);
-    // make sure that case-insensitive paths are accounted for when running on windows
+export function isDescendent(filePath: LooseUri, parentDir: LooseUri): boolean;
+export function isDescendent(_filePath: LooseUri, _parentDir: LooseUri): boolean {
+    const filePath = toString(_filePath);
+    const parentDir = toString(_parentDir);
     const caseInsensitive = process.platform === 'win32';
-    const absPath = ((nodeJsPath.isAbsolute(tightPath))
-        ? ((caseInsensitive)
-            ? tightPath.toLocaleLowerCase()
-            : tightPath
-          )
-        : ((caseInsensitive)
-            ? nodeJsPath.resolve(tightPath).toLocaleLowerCase()
-            : nodeJsPath.resolve(tightPath)
-        )
-    );
-    const absParent = ((nodeJsPath.isAbsolute(tightParent))
-        ? ((caseInsensitive)
-            ? tightParent.toLocaleLowerCase()
-            : tightParent
-          )
-        : ((caseInsensitive)
-            ? nodeJsPath.resolve(tightParent).toLocaleLowerCase()
-            : nodeJsPath.resolve(tightParent)
-        )
-    );
+    const filePathParts = path.normalize(caseInsensitive ? filePath.toLocaleLowerCase() : filePath).split(path.sep);
+    const parentDirParts = path.normalize(caseInsensitive ? parentDir.toLocaleLowerCase() : parentDir).split(path.sep);
 
-    return absPath.startsWith(absParent);
+    if (parentDirParts.length > filePathParts.length) {
+        return false;
+    } else {
+        for (let i = 0; i < parentDirParts.length; i++) {
+            const filePathPart = filePathParts[i];
+            const parentDirPart = parentDirParts[i];
+            if (parentDirPart !== filePathPart) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
