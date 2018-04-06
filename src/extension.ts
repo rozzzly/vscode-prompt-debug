@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
-import { locate, getActiveFile } from './fsTools';
+import { locatePath, getActiveFile } from './fsTools';
 import autoResolve from './autoResolve';
 
 
@@ -104,7 +104,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
                 throw new Error('User did not supply a file.');
             }
         }
-        const file = await locate(potentialFile);
+        const file = await locatePath(potentialFile);
         if (!file) {
             vscode.window.showErrorMessage('Could not find the specified file.');
             throw new URIError(`Could not find the specified file: '${potentialFile}'`);

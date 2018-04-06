@@ -1,7 +1,7 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
 import { CONFIG_IDs } from './extension';
-import { fileExists, locate, getActiveFile, lastModified } from './fsTools';
+import { fileExists, locatePath, getActiveFile, lastModified } from './fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from './substitution';
 
@@ -50,8 +50,7 @@ export default async (): Promise<string> => {
     if (activeFile) {
         const cfg: string = vscode.workspace.getConfiguration().get(CONFIG_IDs.autoResolveScript);
         if (typeof cfg === 'string' && cfg.length > 0) {
-            const substituted = await substitute(cfg);
-            const scriptPath = await locate(substituted);
+            const scriptPath = await locatePath(await substitute(cfg));
             console.log('scriptPath: ', scriptPath);
             if (scriptPath) { // check to see if script could be located
                  if (await ensureTsNode()) {

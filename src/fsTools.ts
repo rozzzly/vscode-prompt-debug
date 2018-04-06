@@ -3,111 +3,131 @@ import * as path from 'path';
 import * as fs from 'fs-extra-promise';
 import { substitute } from './substitution';
 
-export function getActiveFile(): string | false {
+export function getActiveFile(): string | null {
     if (vscode.window.activeTextEditor) {
         return vscode.window.activeTextEditor.document.uri.fsPath;
     } else {
-        return false;
+        return null;
     }
 }
-export function getActiveFileUri(): vscode.Uri | false {
+export function getActiveFileUri(): vscode.Uri | null {
     if (vscode.window.activeTextEditor) {
         return vscode.window.activeTextEditor.document.uri;
     } else {
-        return false;
+        return null;
     }
 }
 
 export type LooseUri = string | vscode.Uri;
 
-export function toUri(value: LooseUri): vscode.Uri {
+export async function toUri(value: LooseUri): Promise<vscode.Uri> {
     if (typeof value === 'string') {
-        return vscode.Uri.file(value);
+        return vscode.Uri.file(await substitute(value));
     } else {
         return value;
     }
 }
 
-export function toString(value: LooseUri): string {
+export async function toPath(value: LooseUri): Promise<string> {
     if (typeof value === 'string') {
-        return value;
+        return substitute(value);
     } else {
         return value.fsPath;
     }
 }
 
-export function relative(filePath: LooseUri, dirPath: LooseUri): string;
-export function relative(_filePath: LooseUri, _dirPath: LooseUri): string {
-    const filePath = toString(_filePath);
-    const dirPath = toString(_dirPath);
+export async function relative(filePath: LooseUri, dirPath: LooseUri): Promise<string>;
+export async function relative(_filePath: LooseUri, _dirPath: LooseUri): Promise<string> {
+    const filePath = await toPath(_filePath);
+    const dirPath = await toPath(_dirPath);
     return path.relative(filePath, dirPath);
 }
 
 export const areWorkspacesDefined = (): boolean => vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
-export const areWorkspacesSupported = (): boolean => 'workspaceFolders' in vscode.workspace;
-
-
-export async function locate(filePath: LooseUri): Promise<string | false> {
-    const tight = toString(filePath);
-    const expanded = await substitute(tight);
-    return await exists(expanded) ? expanded : false;
+export const areWorkspacesSupported = (): boolean => 'workspaceFolders' in vscode.workspace; // TODO ::: test on old vscode && new vscode with NO workspace
+export function getWorkspaceFolderUri(): vscode.Uri | null;
+export async function getWorkspaceFolderUri(filePath: LooseUri): Promise<vscode.Uri | null>;
+export function getWorkspaceFolderUri(_filePath?: LooseUri): vscode.Uri | null | Promise<vscode.Uri | null> {
+    if (areWorkspacesSupported() && areWorkspacesDefined()) {
+        if (_filePath) {
+            return new Promise(async resolve => {
+                const expanded = await toPath(_filePath); // expand out here so `isDescendent` doesn't need to substitution on every iteration
+                for (const workspace of vscode.workspace.workspaceFolders) {
+                    if (await isDescendent(expanded, workspace.uri)) {
+                        resolve(workspace.uri);
+                        break;
+                    }
+                }
+            });
+        } else {
+            return vscode.workspace.workspaceFolders[0].uri;
+        }
+    } else if (vscode.workspace.rootPath) {
+        if (_filePath) {
+            return new Promise(async resolve => (
+                resolve((await isDescendent(_filePath, vscode.workspace.rootPath)) ? vscode.Uri.file(vscode.workspace.rootPath) : null)
+            ));
+        } else {
+            return vscode.Uri.file(vscode.workspace.rootPath);
+        }
+    } else {
+        return null;
+    }
 }
 
-export async function locateFile(filePath: LooseUri): Promise<string | false> {
-    const tight = toString(filePath);
-    const expanded = await substitute(tight);
-    return await exists(expanded) ? expanded : false;
+export function getWorkspaceFolderPath(): string | null;
+export async function getWorkspaceFolderPath(filePath: LooseUri): Promise<string | null>;
+export function getWorkspaceFolderPath(_filePath?: LooseUri): string | null | Promise<string | null> {
+    if (_filePath) {
+        return getWorkspaceFolderUri(_filePath).then(uri => uri.fsPath);
+    } else {
+        return getWorkspaceFolderUri().fsPath;
+    }
+}
+
+
+export async function locateUri(filePath: string): Promise<vscode.Uri| null> {
+    const expanded = await toUri(filePath);
+    return (await exists(expanded)) ? expanded : null;
+}
+export async function locatePath(filePath: string): Promise<string | null> {
+    const expanded = await toUri(filePath);
+    return (await exists(expanded)) ? expanded.fsPath : null;
 }
 
 export async function lastModified(filePath: LooseUri): Promise<number> {
-    const stats = await fs.statAsync(toString(filePath));
-    return stats.mtimeMs;
+    return (await fs.statAsync(await toPath(filePath))).mtimeMs;
 }
 
 export async function fileExists(filePath: LooseUri): Promise<boolean> {
-    const tight = toString(filePath);
-    if (!tight) return false;
-    else {
-        const expanded = await substitute(tight);
-        try {
-            return (await fs.statAsync(expanded)).isFile();
-        } catch (e) {
-            return false;
-        }
+    try {
+        return (await fs.statAsync(await toPath(filePath))).isFile();
+    } catch (e) {
+        return false;
     }
 }
 
 export async function dirExists(dirPath: LooseUri): Promise<boolean> {
-    const tight = toString(dirPath);
-    if (!tight) return false;
-    else {
-        const expanded = await substitute(tight);
-        try {
-            return (await fs.statAsync(expanded)).isDirectory();
-        } catch (e) {
-            return false;
-        }
+    try {
+        return (await fs.statAsync(await toPath(dirPath))).isDirectory();
+    } catch (e) {
+        return false;
     }
 }
 
 export async function exists(path: LooseUri): Promise<boolean>;
 export async function exists(_path: LooseUri): Promise<boolean> {
-    const tight = toString(_path);
-    if (!tight) return false;
-    else {
-        const expanded = await substitute(tight);
-        try {
-            return !!(await fs.statAsync(expanded));
-        } catch (e) {
-            return false;
-        }
+    try {
+        return !!(await fs.statAsync(await toPath(_path)));
+    } catch (e) {
+        return false;
     }
 }
 
-export function isDescendent(filePath: LooseUri, parentDir: LooseUri): boolean;
-export function isDescendent(_filePath: LooseUri, _parentDir: LooseUri): boolean {
-    const filePath = toString(_filePath);
-    const parentDir = toString(_parentDir);
+export async function isDescendent(filePath: LooseUri, parentDir: LooseUri): Promise<boolean>;
+export async function isDescendent(_filePath: LooseUri, _parentDir: LooseUri): Promise<boolean> {
+    const filePath = await toPath(_filePath);
+    const parentDir = await toPath(_parentDir);
     const caseInsensitive = process.platform === 'win32';
     const filePathParts = path.normalize(caseInsensitive ? filePath.toLocaleLowerCase() : filePath).split(path.sep);
     const parentDirParts = path.normalize(caseInsensitive ? parentDir.toLocaleLowerCase() : parentDir).split(path.sep);
