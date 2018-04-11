@@ -1,11 +1,10 @@
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { workspace } from 'vscode';
+import { workspace, commands,  } from 'vscode';
 import { getActiveFilePath, getActiveFileUri, relative } from './fsTools';
-import { isMultiRootSupported, isWorkspaceOpen, getWorkspace } from './compat';
+import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspaceFolderByName } from './compat';
 
-const subEscape: RegExp = /(\$\{\s*\S+?(?:\s?\S?)*?\})/g
-const unwrapSubEscape: RegExp = /\$\{([\s|\S]*)\}/g;
+const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\s\S]*?\})/g
+const subEscapeExtractor: RegExp = /\$\{(\s*\S+[\s\S]*?)\}/g;
 
 export type SimpleSubPatternHandler = {
     pattern: string;
@@ -29,9 +28,9 @@ const defaultHandlers: SubPatternHandler[] = [
     {
         pattern: /command\:([\s\S]+)/,
         async resolver(command): Promise<string> {
-            const commands = await vscode.commands.getCommands();
-            if (commands.includes(command)) {
-                return vscode.commands.executeCommand<string>(command);
+            const cmds = await commands.getCommands();
+            if (cmds.includes(command)) {
+                return commands.executeCommand<string>(command).then(out => out || '');
             } else {
                 throw new TypeError('unregistered command.')
             }
@@ -50,14 +49,18 @@ const defaultHandlers: SubPatternHandler[] = [
     },
     {
         pattern: /relativeFile/,
-        resolver(): string {
+        async resolver(): Promise<string> {
             const activeFile = getActiveFileUri();
             if (activeFile) {
-                if (isMultiRootSupported && isWorkspaceOpen()) {
-                    const workspace = getWorkspace(activeFile);
-                    return relative(activeFile, workspace.uri);
+                if (isWorkspaceOpen()) {
+                    const ws = await getWorkspaceFolder(activeFile);
+                    if (ws) {
+                        return relative(activeFile, ws.uri);
+                    } else {
+                        throw new TypeError('Could not find workspace for this resource!')
+                    }
                 } else {
-                    throw new TypeError('No workspaces defined.')
+                    throw new TypeError('No open workspaces.')
                 }
             } else {
                 throw new TypeError('No open file.')
@@ -66,42 +69,30 @@ const defaultHandlers: SubPatternHandler[] = [
     },
     {
         pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+)\:)?Basename)/,
-        resolver(workspaceName: string | undefined): string {
-            if (isMultiRootSupported && isWorkspaceOpen()) {
-                if (workspaceName) {
-                    const workspace  = vscode.workspace.workspaceFolders.find(workspace => workspace.name === workspaceName);
-                    if (workspace) {
-                        return path.basename(workspace.uri.fsPath);
-                    } else {
-                        throw TypeError('No workspace with that name.')
-                    }
+        async resolver(workspaceName: string | undefined): Promise<string> {
+            if (isWorkspaceOpen()) {
+                const ws = getWorkspaceFolderByName(workspaceName)
+                if (ws) {
+                    return path.basename(ws.uri.fsPath);
                 } else {
-                    return path.basename(vscode.workspace.workspaceFolders[0].uri.fsPath);
+                    throw new TypeError('Could not find workspace for that resource!');
                 }
-            } else if (!isMultiRootSupported && !workspaceName) {
-                return path.basename(vscode.workspace.rootPath)
-            } else {
+             } else {
                 throw new TypeError('No open workspaces.')
             }
         }
     },
     {
         pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+))?)/,
-        resolver(workspaceName: string | undefined): string {
-            if (isMultiRootSupported && isWorkspaceOpen()) {
-                if (workspaceName) {
-                    const workspace  = vscode.workspace.workspaceFolders.find(workspace => workspace.name === workspaceName);
-                    if (workspace) {
-                        return workspace.uri.fsPath;
-                    } else {
-                        throw TypeError('No workspace with that name.')
-                    }
+        async resolver(workspaceName: string | undefined): Promise<string> {
+            if (isWorkspaceOpen()) {
+                const ws = getWorkspaceFolderByName(workspaceName)
+                if (ws) {
+                    return ws.uri.fsPath;
                 } else {
-                    return vscode.workspace.workspaceFolders[0].uri.fsPath;
+                    throw new TypeError('Could not find workspace for that resource!');
                 }
-            } else if (!isMultiRootSupported && !workspaceName) {
-                return vscode.workspace.rootPath;
-            } else {
+             } else {
                 throw new TypeError('No open workspaces.')
             }
         }
@@ -109,33 +100,40 @@ const defaultHandlers: SubPatternHandler[] = [
 ];
 
 export const containsSubstitutions = (str: string): boolean => (
-    subEscape.test(str)
+    subEscapeSplitter.test(str)
 );
 
 export const substitute = (str: string, handlers: SubPatternHandler[] = defaultHandlers): Promise<string> => (
     Promise.all((str)
-        .split(subEscape)
+        .split(subEscapeSplitter)
         .map(piece => new Promise<string>((resolve, reject) => {
-            const subExpression = unwrapSubEscape.exec(piece)[1];
-            let match: RegExpExecArray = undefined;
-            const handler = handlers.find(handler => {
-                if (isSimple(handler)) {
-                    return subExpression === handler.pattern;
+            const outerMatch = subEscapeExtractor.exec(piece);
+            if (outerMatch) {
+                const subExpression = outerMatch[1];
+                let innerMatch: RegExpExecArray | null = null;
+                const handler = handlers.find(handler => {
+                    if (isSimple(handler)) {
+                        return subExpression === handler.pattern;
+                    } else {
+                        innerMatch = handler.pattern.exec(subExpression);
+                        return !!innerMatch && innerMatch[0] === subExpression; // make sure match is a complete match
+                    }
+                });
+                if (handler) {
+                    if (isSimple(handler)) {
+                        resolve(handler.resolver())
+                    } else {
+                        const [_, ...parameters] = innerMatch!;
+                        resolve(handler.resolver(...parameters));
+                    }
                 } else {
-                    match = handler.pattern.exec(subExpression);
-                    return !!match && match[0] === subExpression; // make sure match is a complete match
-                }
-            });
-            if (handler) {
-                if (isSimple(handler)) {
-                    resolve(handler.resolver())
-                } else {
-                    const [_, ...parameters] = match;
-                    resolve(handler.resolver(...parameters));
+                    reject({
+                        msg: 'unknown substitution pattern encountered',
+                        str, piece, handlers
+                    });
                 }
             } else {
-                console.warn('unknown substitution pattern encountered', { str, piece, handler });
-                resolve(piece); // for now, just return the unchanged part
+                resolve(piece);
             }
         }))
     ).then(pieces => pieces.join())

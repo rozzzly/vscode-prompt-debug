@@ -15,7 +15,8 @@
     "newLine": "LF",
     "pretty": true,
     "lib": ["es2017", "dom"],
-    "outDir": "out"
+    "outDir": "out",
+    "strictNullChecks": true
   },
   "exclude": [
     "node_modules",
