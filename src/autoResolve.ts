@@ -1,10 +1,10 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
-import { CONFIG_IDs } from './extension';
-import { fileExists, locatePath, getActiveFile, lastModified } from './fsTools';
+import { CONFIG_PREFIX, CONFIG_ID_FRAGMENTS } from './extension';
+import * as fsTools from './fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from './substitution';
-
+import { resolve } from 'dns';
 
 let tsNode: typeof _tsNode | false = null;
 let loadFailed: boolean = false;
@@ -13,7 +13,7 @@ let cacheInfo: { scriptPath: string; timestamp: number; script: AutoResolverScri
 async function ensureTsNode(): Promise<boolean> {
     if (tsNode) { // ts node has already been loaded
         return true;
-    } else if (tsNode === null) { // never tried to load ts-node
+    } else if (tsNode === null) { // nev tried to load ts-node
         try {
             tsNode = await import('ts-node');
             tsNode.register({
@@ -31,38 +31,38 @@ async function ensureTsNode(): Promise<boolean> {
         throw new TypeError('unexpected value')
     }
 }
-
-export interface ResolverContext {
-    workspaceFolder: string;
-    relativeTo(baseDir: string): string;
-    isSubDirectoryOf(filePath: string, parentDir: string): boolean;
-    exists(filePath: string): Promise<boolean>;
+export type FsTools = typeof fsTools;
+export interface ResolverContext extends FsTools {
 }
 
-export type SyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => string | false;
-export type AsyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | false>;
+export type SyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => string | null;
+export type AsyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | null>;
 export interface AutoResolverScript {
     autoResolve: SyncAutoResolver | AsyncAutoResolver;
 }
 
 export default async (): Promise<string> => {
-    const activeFile = getActiveFile();
-    if (activeFile) {
-        const cfg: string = vscode.workspace.getConfiguration().get(CONFIG_IDs.autoResolveScript);
+    const activeFileUri = fsTools.getActiveFileUri();
+    if (activeFileUri) {
+        console.log(vscode.version);
+        /// TODO ::: detect vscode < v1.18 and do not use activeFileUri overload
+        const cfg: string = vscode.workspace.getConfiguration(CONFIG_PREFIX, activeFileUri).get(CONFIG_ID_FRAGMENTS.autoResolveScript);
+        console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
-            const scriptPath = await locatePath(await substitute(cfg));
+        const scriptPath = await fsTools.resolveToPath(await substitute(cfg));
             console.log('scriptPath: ', scriptPath);
             if (scriptPath) { // check to see if script could be located
                  if (await ensureTsNode()) {
                     console.log('tsNode resolved:', tsNode);
                     let script: AutoResolverScript | null = null;
                     if (cacheInfo) { // first time using this command
-                        if (loadFailed || cacheInfo.scriptPath === scriptPath && cacheInfo.timestamp !== await lastModified(scriptPath)) {
+                        if (loadFailed || cacheInfo.scriptPath === scriptPath && cacheInfo.timestamp !== await fsTools.lastModified(scriptPath)) {
                             try {
                                 decache(scriptPath); // remove any cached versions (so file changes are respected)
                                 script = await import(scriptPath);
                             } catch(e) {
                                 cacheInfo = null;
+                                loadFailed = true;
                                 script = null;
                                 console.log('clearing cache + reload auto resolve script failed', e);
                             }
@@ -82,19 +82,20 @@ export default async (): Promise<string> => {
                         if ('autoResolve' in script && typeof script.autoResolve === 'function') {
                             loadFailed = false;
                             console.log('autoResolveScript matches expected shape', script);
-                            let resolved: string | false = false;
+                            let resolved: string | null = null;
                             try {
-                                resolved = await script.autoResolve(activeFile, {} as any);
+                                resolved = await script.autoResolve(activeFileUri.fsPath, {} as any);
                             } catch (e) {
-                                resolved = false;
+                                resolved = null;
                                 console.log('autoResolve func failed:', e);
                             }
                             console.log('resolved value: ', resolved);
                             cacheInfo = {
                                 script,
                                 scriptPath,
-                                timestamp: await lastModified(scriptPath)
+                                timestamp: await fsTools.lastModified(scriptPath)
                             };
+                            return resolved;
                         } else {
                             loadFailed = true;
                             console.log('autoResolve function not exported by the imported script');
@@ -114,7 +115,7 @@ export default async (): Promise<string> => {
             console.log('cannot auto resolve, no autoResolveScript');
         }
     } else {
-        throw new Error('Cannot get activeFile!');
+        console.log('no active file');
     }
-    return '';
+    return null;
 }

@@ -1,6 +1,6 @@
 {
     "name": "vscode-prompt-debug",
-    "displayName": "VSCode Prompt Debug",
+    "displayName": "VSCode Debug Resolve",
     "version": "0.0.2",
     "publisher": "rozzzly-dev",
     "description": "Extension that allows you quickly launch a vscode debug session for a file of your choice.",
@@ -27,6 +27,7 @@
     "dependencies": {
         "decache": "^4.4.0",
         "fs-extra-promise": "^1.0.1",
+        "semver": "^5.5.0",
         "ts-node": "^5.0.1",
         "vscode": "^1.1.14"
     },
@@ -55,7 +56,8 @@
                     "description": "A javascript or typescript file which is exports a function named 'autoResolve' that resolves a file path to run.",
                     "title": "Auto Resolve Script",
                     "type": "string",
-                    "required": false
+                    "required": false,
+                    "scope": "resource"
                 }
             }
         },

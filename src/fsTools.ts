@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs-extra-promise';
 import { substitute } from './substitution';
+import { workspace } from 'vscode';
+import { POINT_CONVERSION_COMPRESSED } from 'constants';
+import { isMultiRootSupported } from './compat';
 
-export function getActiveFile(): string | null {
+export function getActiveFilePath(): string | null {
     if (vscode.window.activeTextEditor) {
         return vscode.window.activeTextEditor.document.uri.fsPath;
     } else {
@@ -20,15 +23,19 @@ export function getActiveFileUri(): vscode.Uri | null {
 
 export type LooseUri = string | vscode.Uri;
 
-export async function toUri(value: LooseUri): Promise<vscode.Uri> {
+export function toUri(value: vscode.Uri): vscode.Uri;
+export async function toUri(value: LooseUri): Promise<vscode.Uri>;
+export function toUri(value: LooseUri): Promise<vscode.Uri> | vscode.Uri {
     if (typeof value === 'string') {
-        return vscode.Uri.file(await substitute(value));
+        return substitute(value).then(v => vscode.Uri.file(v));
     } else {
         return value;
     }
 }
 
-export async function toPath(value: LooseUri): Promise<string> {
+export function toPath(value: vscode.Uri): string;
+export async function toPath(value: LooseUri): Promise<string>;
+export function toPath(value: LooseUri): Promise<string> | string {
     if (typeof value === 'string') {
         return substitute(value);
     } else {
@@ -36,63 +43,27 @@ export async function toPath(value: LooseUri): Promise<string> {
     }
 }
 
-export async function relative(filePath: LooseUri, dirPath: LooseUri): Promise<string>;
-export async function relative(_filePath: LooseUri, _dirPath: LooseUri): Promise<string> {
-    const filePath = await toPath(_filePath);
-    const dirPath = await toPath(_dirPath);
-    return path.relative(filePath, dirPath);
-}
-
-export const areWorkspacesDefined = (): boolean => vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
-export const areWorkspacesSupported = (): boolean => 'workspaceFolders' in vscode.workspace; // TODO ::: test on old vscode && new vscode with NO workspace
-export function getWorkspaceFolderUri(): vscode.Uri | null;
-export async function getWorkspaceFolderUri(filePath: LooseUri): Promise<vscode.Uri | null>;
-export function getWorkspaceFolderUri(_filePath?: LooseUri): vscode.Uri | null | Promise<vscode.Uri | null> {
-    if (areWorkspacesSupported() && areWorkspacesDefined()) {
-        if (_filePath) {
-            return new Promise(async resolve => {
-                const expanded = await toPath(_filePath); // expand out here so `isDescendent` doesn't need to substitution on every iteration
-                for (const workspace of vscode.workspace.workspaceFolders) {
-                    if (await isDescendent(expanded, workspace.uri)) {
-                        resolve(workspace.uri);
-                        break;
-                    }
-                }
-            });
-        } else {
-            return vscode.workspace.workspaceFolders[0].uri;
-        }
-    } else if (vscode.workspace.rootPath) {
-        if (_filePath) {
-            return new Promise(async resolve => (
-                resolve((await isDescendent(_filePath, vscode.workspace.rootPath)) ? vscode.Uri.file(vscode.workspace.rootPath) : null)
-            ));
-        } else {
-            return vscode.Uri.file(vscode.workspace.rootPath);
-        }
+export function relative(resource: vscode.Uri, base: vscode.Uri): string;
+export async function relative(resource: LooseUri, base: LooseUri): Promise<string>;
+export function relative(_resource: LooseUri, _base: LooseUri): string | Promise<string> {
+    if (typeof _resource === 'string' || typeof _base === 'string') {
+        return (async () => {
+            const resource = await toPath(_resource);
+            const base = await toPath(_base);
+            return path.relative(resource, base);
+        })();
     } else {
-        return null;
+        return path.relative(_resource.fsPath, _base.fsPath);
     }
 }
 
-export function getWorkspaceFolderPath(): string | null;
-export async function getWorkspaceFolderPath(filePath: LooseUri): Promise<string | null>;
-export function getWorkspaceFolderPath(_filePath?: LooseUri): string | null | Promise<string | null> {
-    if (_filePath) {
-        return getWorkspaceFolderUri(_filePath).then(uri => uri.fsPath);
-    } else {
-        return getWorkspaceFolderUri().fsPath;
-    }
+export async function resolveToUri(resource: string): Promise<vscode.Uri| null> {
+    const uri = await toUri(resource);
+    return (await exists(uri)) ? uri : null;
 }
-
-
-export async function locateUri(filePath: string): Promise<vscode.Uri| null> {
-    const expanded = await toUri(filePath);
-    return (await exists(expanded)) ? expanded : null;
-}
-export async function locatePath(filePath: string): Promise<string | null> {
-    const expanded = await toUri(filePath);
-    return (await exists(expanded)) ? expanded.fsPath : null;
+export async function resolveToPath(resource: string): Promise<string | null> {
+    const uri = await resolveToUri(resource);
+    return (uri) ? uri.fsPath : null;
 }
 
 export async function lastModified(filePath: LooseUri): Promise<number> {
@@ -115,33 +86,56 @@ export async function dirExists(dirPath: LooseUri): Promise<boolean> {
     }
 }
 
-export async function exists(path: LooseUri): Promise<boolean>;
-export async function exists(_path: LooseUri): Promise<boolean> {
+export async function exists(resource: LooseUri): Promise<boolean> {
     try {
-        return !!(await fs.statAsync(await toPath(_path)));
+        return !!(await fs.statAsync(await toPath(resource)));
     } catch (e) {
         return false;
     }
 }
 
-export async function isDescendent(filePath: LooseUri, parentDir: LooseUri): Promise<boolean>;
-export async function isDescendent(_filePath: LooseUri, _parentDir: LooseUri): Promise<boolean> {
-    const filePath = await toPath(_filePath);
-    const parentDir = await toPath(_parentDir);
-    const caseInsensitive = process.platform === 'win32';
-    const filePathParts = path.normalize(caseInsensitive ? filePath.toLocaleLowerCase() : filePath).split(path.sep);
-    const parentDirParts = path.normalize(caseInsensitive ? parentDir.toLocaleLowerCase() : parentDir).split(path.sep);
+export function isDescendent(resource: vscode.Uri, base: vscode.Uri): boolean;
+export async function isDescendent(resource: LooseUri, base: LooseUri): Promise<boolean>;
+export function isDescendent(_resource: LooseUri, _base: LooseUri): boolean | Promise<boolean> {
+    if (typeof _resource === 'string' || typeof _base === 'string') {
+        return (async() => {
+            const resource = await toPath(_resource);
+            const base = await toPath(_base);
+            const caseInsensitive = process.platform === 'win32';
+            const resourceParts = path.normalize(caseInsensitive ? resource.toLocaleLowerCase() : resource).split(path.sep);
+            const baseParts = path.normalize(caseInsensitive ? base.toLocaleLowerCase() : base).split(path.sep);
 
-    if (parentDirParts.length > filePathParts.length) {
-        return false;
-    } else {
-        for (let i = 0; i < parentDirParts.length; i++) {
-            const filePathPart = filePathParts[i];
-            const parentDirPart = parentDirParts[i];
-            if (parentDirPart !== filePathPart) {
+            if (baseParts.length > resource.length) {
                 return false;
+            } else {
+                for (let i = 0; i < baseParts.length; i++) {
+                    const resourcePart = resourceParts[i];
+                    const basePart = baseParts[i];
+                    if (basePart !== resourcePart) {
+                        return false;
+                    }
+                }
+                return true;
             }
+        })();
+    } else {
+        const resource = _resource.fsPath;
+        const base = _base.fsPath;
+        const caseInsensitive = process.platform === 'win32';
+        const resourceParts = path.normalize(caseInsensitive ? resource.toLocaleLowerCase() : resource).split(path.sep);
+        const baseParts = path.normalize(caseInsensitive ? base.toLocaleLowerCase() : base).split(path.sep);
+
+        if (baseParts.length > resource.length) {
+            return false;
+        } else {
+            for (let i = 0; i < baseParts.length; i++) {
+                const resourcePart = resourceParts[i];
+                const basePart = baseParts[i];
+                if (basePart !== resourcePart) {
+                    return false;
+                }
+            }
+            return true;
         }
-        return true;
     }
 }

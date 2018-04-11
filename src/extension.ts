@@ -2,15 +2,19 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
-import { locatePath, getActiveFile } from './fsTools';
+import { resolveToPath, getActiveFilePath } from './fsTools';
 import autoResolve from './autoResolve';
+import { EALREADY } from 'constants';
 
 
 export const CONFIG_PREFIX = 'prompt-debug';
-export const CONFIG_IDs = {
-    autoResolveScript: `${CONFIG_PREFIX}.autoResolveScript`
+export const CONFIG_ID_FRAGMENTS = {
+    autoResolveScript: 'autoResolveScript'
 };
-
+export const CONFIG_IDs: { [K in keyof typeof CONFIG_ID_FRAGMENTS]: string } = Object.keys(CONFIG_ID_FRAGMENTS).reduce((reduction, value, key) => ({
+    ...reduction,
+    [key]: `${CONFIG_PREFIX}.${key}`
+}), {}) as any;
 export const COMMAND_PREFIX = 'prompt-debug';
 export const COMMAND_IDs = {
     resolve: `${COMMAND_PREFIX}.resolve`,
@@ -69,7 +73,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
         description: '',
         detail: 'Enter a path (relative to the workspace root) to be targeted by the debug session.'
     };
-    const activeFile = getActiveFile();
+    const activeFile = getActiveFilePath();
     const activeFileOption: vscode.QuickPickItem = {
         label: '------- Active File -------',
         detail: activeFile || '',
@@ -104,7 +108,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
                 throw new Error('User did not supply a file.');
             }
         }
-        const file = await locatePath(potentialFile);
+        const file = await resolveToPath(potentialFile);
         if (!file) {
             vscode.window.showErrorMessage('Could not find the specified file.');
             throw new URIError(`Could not find the specified file: '${potentialFile}'`);

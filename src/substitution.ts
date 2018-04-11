@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { workspace } from 'vscode';
-import { getActiveFile, areWorkspacesSupported, areWorkspacesDefined, getActiveFileUri } from './fsTools';
+import { getActiveFilePath, getActiveFileUri, relative } from './fsTools';
+import { isMultiRootSupported, isWorkspaceOpen, getWorkspace } from './compat';
 
 const subEscape: RegExp = /(\$\{\s*\S+?(?:\s?\S?)*?\})/g
 const unwrapSubEscape: RegExp = /\$\{([\s|\S]*)\}/g;
@@ -26,7 +27,7 @@ export const isParameterized = (value: any): value is ParameterizedSubPatternHan
 
 const defaultHandlers: SubPatternHandler[] = [
     {
-        pattern: /command\:((?:\s\S)+)/,
+        pattern: /command\:([\s\S]+)/,
         async resolver(command): Promise<string> {
             const commands = await vscode.commands.getCommands();
             if (commands.includes(command)) {
@@ -39,7 +40,7 @@ const defaultHandlers: SubPatternHandler[] = [
     {
         pattern: /file/,
         resolver(): string {
-            const activeFile = getActiveFile();
+            const activeFile = getActiveFilePath();
             if (activeFile) {
                 return activeFile;
             } else {
@@ -52,9 +53,9 @@ const defaultHandlers: SubPatternHandler[] = [
         resolver(): string {
             const activeFile = getActiveFileUri();
             if (activeFile) {
-                if (areWorkspacesSupported() && areWorkspacesDefined()) {
-                    const workspace = vscode.workspace.getWorkspaceFolder(activeFile);
-                    return '';
+                if (isMultiRootSupported && isWorkspaceOpen()) {
+                    const workspace = getWorkspace(activeFile);
+                    return relative(activeFile, workspace.uri);
                 } else {
                     throw new TypeError('No workspaces defined.')
                 }
@@ -64,9 +65,9 @@ const defaultHandlers: SubPatternHandler[] = [
         }
     },
     {
-        pattern: /(?:workspaceRoot|workspaceFolder(?:\:([^\.]+)\:)?Basename)/,
+        pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+)\:)?Basename)/,
         resolver(workspaceName: string | undefined): string {
-            if (areWorkspacesSupported() && areWorkspacesDefined()) {
+            if (isMultiRootSupported && isWorkspaceOpen()) {
                 if (workspaceName) {
                     const workspace  = vscode.workspace.workspaceFolders.find(workspace => workspace.name === workspaceName);
                     if (workspace) {
@@ -77,7 +78,7 @@ const defaultHandlers: SubPatternHandler[] = [
                 } else {
                     return path.basename(vscode.workspace.workspaceFolders[0].uri.fsPath);
                 }
-            } else if (!areWorkspacesSupported() && !workspaceName) {
+            } else if (!isMultiRootSupported && !workspaceName) {
                 return path.basename(vscode.workspace.rootPath)
             } else {
                 throw new TypeError('No open workspaces.')
@@ -85,9 +86,9 @@ const defaultHandlers: SubPatternHandler[] = [
         }
     },
     {
-        pattern: /(?:workspaceRoot|workspaceFolder(?:\:([^\.]+))?)/,
+        pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+))?)/,
         resolver(workspaceName: string | undefined): string {
-            if (areWorkspacesSupported() && areWorkspacesDefined()) {
+            if (isMultiRootSupported && isWorkspaceOpen()) {
                 if (workspaceName) {
                     const workspace  = vscode.workspace.workspaceFolders.find(workspace => workspace.name === workspaceName);
                     if (workspace) {
@@ -98,7 +99,7 @@ const defaultHandlers: SubPatternHandler[] = [
                 } else {
                     return vscode.workspace.workspaceFolders[0].uri.fsPath;
                 }
-            } else if (!areWorkspacesSupported() && !workspaceName) {
+            } else if (!isMultiRootSupported && !workspaceName) {
                 return vscode.workspace.rootPath;
             } else {
                 throw new TypeError('No open workspaces.')
