@@ -41,7 +41,7 @@ export interface AutoResolverScript {
     autoResolve: SyncAutoResolver | AsyncAutoResolver;
 }
 
-export default async (): Promise<string> => {
+export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();
     if (activeFileUri) {
         console.log(vscode.version);

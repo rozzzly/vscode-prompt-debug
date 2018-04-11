@@ -5,23 +5,10 @@ import * as path from 'path';
 import { resolveToPath, getActiveFilePath } from './fsTools';
 import autoResolve from './autoResolve';
 import { EALREADY } from 'constants';
+import { COMMAND_IDs } from './constants';
 
 
-export const CONFIG_PREFIX = 'prompt-debug';
-export const CONFIG_ID_FRAGMENTS = {
-    autoResolveScript: 'autoResolveScript'
-};
-export const CONFIG_IDs: { [K in keyof typeof CONFIG_ID_FRAGMENTS]: string } = Object.keys(CONFIG_ID_FRAGMENTS).reduce((reduction, value, key) => ({
-    ...reduction,
-    [key]: `${CONFIG_PREFIX}.${key}`
-}), {}) as any;
-export const COMMAND_PREFIX = 'prompt-debug';
-export const COMMAND_IDs = {
-    resolve: `${COMMAND_PREFIX}.resolve`,
-    prompt: `${COMMAND_PREFIX}.prompt`,
-    clearHistory: `${COMMAND_PREFIX}.clearHistory`,
-    autoResolve: `${COMMAND_PREFIX}.autoResolve`,
-};
+
 const CHOICE_TIMEOUT: number = 333;
 const HISTORY_SIZE: number = 15;
 
