@@ -35,7 +35,7 @@
         "@types/fs-extra-promise": "^1.0.4",
         "@types/node": "^9.6.4",
         "@types/semver": "^5.5.0",
-        "typescript": "^2.8.1"
+        "typescript": "^2.9.0-dev.20180411"
     },
     "scripts": {
         "prepublish": "node ./node_modules/typescript/bin/tsc -p ./",

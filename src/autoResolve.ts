@@ -1,12 +1,13 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
-import { CONFIG_PREFIX, CONFIG_ID_FRAGMENTS } from './extension';
+import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from './constants';
 import * as fsTools from './fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from './substitution';
 import { resolve } from 'dns';
+import { config } from './compat';
 
-let tsNode: typeof _tsNode | false = null;
+let tsNode: typeof _tsNode | null | false = null;
 let loadFailed: boolean = false;
 let cacheInfo: { scriptPath: string; timestamp: number; script: AutoResolverScript; } | null = null;
 
@@ -37,8 +38,9 @@ export interface ResolverContext extends FsTools {
 
 export type SyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => string | null;
 export type AsyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | null>;
+export type AutoResolver = SyncAutoResolver | AsyncAutoResolver;
 export interface AutoResolverScript {
-    autoResolve: SyncAutoResolver | AsyncAutoResolver;
+    autoResolve: AutoResolver;
 }
 
 export default async (): Promise<string | null> => {
@@ -46,7 +48,7 @@ export default async (): Promise<string | null> => {
     if (activeFileUri) {
         console.log(vscode.version);
         /// TODO ::: detect vscode < v1.18 and do not use activeFileUri overload
-        const cfg: string = vscode.workspace.getConfiguration(CONFIG_PREFIX, activeFileUri).get(CONFIG_ID_FRAGMENTS.autoResolveScript);
+        const cfg = config(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript)
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
         const scriptPath = await fsTools.resolveToPath(await substitute(cfg));

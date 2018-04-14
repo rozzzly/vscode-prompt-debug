@@ -4,13 +4,17 @@ export const PREFIX = 'prompt-debug';
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-export const CONFIG_ID_FRAGMENTS = {
+
+
+export const CONFIG_IDs = {
     autoResolveScript: 'autoResolveScript'
 };
-export const CONFIG_IDs: {
-    [K in keyof typeof CONFIG_ID_FRAGMENTS]: string
-} = Object.keys(CONFIG_ID_FRAGMENTS).reduce(
-    (reduction, value, key) => ({
+export type CONFIG_ID_FRAGMENTS = keyof typeof CONFIG_IDs;
+
+export const CONFIG_CANONICAL_IDs: {
+    [K in CONFIG_ID_FRAGMENTS]: string
+} = Object.keys(CONFIG_IDs).reduce(
+    (reduction, key) => ({
         ...reduction,
         [key]: `${PREFIX}.${key}`
     }), {}
@@ -20,16 +24,18 @@ export const CONFIG_IDs: {
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-export const COMMAND_ID_FRAGMENTS = {
+export const COMMAND_IDs = {
     resolve: 'resolve',
     prompt: 'prompt',
     clearHistory: 'clearHistory',
     autoResolve: 'autoResolve'
 };
 
-export const COMMAND_IDs: {
-    [K in keyof typeof COMMAND_ID_FRAGMENTS]: string
-} = Object.keys(COMMAND_ID_FRAGMENTS).reduce(
+export type COMMAND_ID_FRAGMENTS = keyof typeof COMMAND_IDs;
+
+export const COMMAND_CANONICAL_IDs: {
+    [K in COMMAND_ID_FRAGMENTS]: string
+} = Object.keys(COMMAND_IDs).reduce(
     (reduction, value, key) => ({
         ...reduction,
         [key]: `${PREFIX}.${key}`

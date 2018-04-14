@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as semver from 'semver';
-import { Uri, workspace, WorkspaceFolder, version } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration } from 'vscode';
 import { LooseUri, isDescendent, toUri } from './fsTools';
+import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
 
 export const isCaseInsensitive = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
@@ -12,12 +13,12 @@ export const isWorkspaceOpen = (): boolean => (
     !!(workspace.rootPath && workspace.rootPath.length > 0)
 );
 
-export type PotentiallyFauxWorkspace = WorkspaceFolder & { faux?: true };
+export type PotentiallyFauxWorkspaceFolder = WorkspaceFolder & { faux?: true };
 
-export function getWorkspaces(): PotentiallyFauxWorkspace[] | null {
+export function getWorkspaces(): PotentiallyFauxWorkspaceFolder[] | null {
     if (isWorkspaceOpen()) {
         if (isMultiRootSupported) {
-            return workspace.workspaceFolders as PotentiallyFauxWorkspace[];
+            return workspace.workspaceFolders as PotentiallyFauxWorkspaceFolder[];
         } else {
             return [{
                 index: 0,
@@ -31,7 +32,7 @@ export function getWorkspaces(): PotentiallyFauxWorkspace[] | null {
     }
 }
 
-export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFauxWorkspace | null {
+export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFauxWorkspaceFolder | null {
     const ws = getWorkspaces();
     if (ws) {
         if (workspaceName) {
@@ -45,7 +46,7 @@ export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFau
 }
 
 
-export async function getWorkspaceFolder(resource?: LooseUri): Promise<PotentiallyFauxWorkspace | null> {
+export async function getWorkspaceFolder(resource?: LooseUri): Promise<PotentiallyFauxWorkspaceFolder | null> {
     if (isWorkspaceOpen()) {
        if (resource) {
             if (isMultiRootSupported) {
@@ -87,7 +88,14 @@ export async function getWorkspaceFolderUri(resource?: LooseUri): Promise<Uri | 
     return getWorkspaceFolder(resource).then(ws => (ws && ws.uri) || null);
 }
 
-
 export async function getWorkspaceFolderPath(resource?: LooseUri): Promise<string | null> {
     return getWorkspaceFolder(resource).then(ws => (ws && ws.uri.fsPath) || null);
+}
+
+export function config(resource?: Uri): WorkspaceConfiguration {
+    if (resource && isMultiRootSupported) {
+        return workspace.getConfiguration(PREFIX, resource);
+    } else {
+        return workspace.getConfiguration(PREFIX);
+    }
 }

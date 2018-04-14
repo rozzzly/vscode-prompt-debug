@@ -5,7 +5,7 @@ import * as path from 'path';
 import { resolveToPath, getActiveFilePath } from './fsTools';
 import autoResolve from './autoResolve';
 import { EALREADY } from 'constants';
-import { COMMAND_IDs } from './constants';
+import { COMMAND_CANONICAL_IDs } from './constants';
 
 
 
@@ -70,21 +70,24 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
 
     // setup list of options
     const options: vscode.QuickPickItem[] = [
-        enterFileOption,
-        ((activeFile) 
-            ? activeFileOption 
-            : undefined
+        ...((activeFile)
+            ? [
+                enterFileOption,
+                activeFileOption
+            ] : [
+                enterFileOption
+            ]
         ),
         ...previousFiles.map<vscode.QuickPickItem>(record => ({
             label: vscode.workspace.asRelativePath(record.file),
             description: '',
             detail: record.file
         }))
-    ].filter(opt => !!opt); // filter out active file option if no editor is open
+    ]; // filter out active file option if no editor is open
 
     const chosen = await vscode.window.showQuickPick(options, { /**/ });
     if (chosen) {
-        let potentialFile: string = chosen.detail;
+        let potentialFile = chosen.detail;
         if (chosen === enterFileOption) {
             const result = await vscode.window.showInputBox({
                 prompt: 'Path of file to launch debug session for.',
@@ -112,9 +115,9 @@ export function activate(context: vscode.ExtensionContext) {
     log('extension started!');
     log(vscode.Uri.file('./'))
     log(vscode.Uri.file('./package.json'))
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.prompt, promptForFile));
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.prompt, promptForFile));
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.resolve, async (): Promise<string> => {
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.resolve, async (): Promise<string> => {
         // if choice is stale/no choice made, re-prompt user.
         if (!launchChoice.file || (Date.now() - launchChoice.timestamp) >= CHOICE_TIMEOUT) {
             const file = await promptForFile(context);
@@ -130,11 +133,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.clearHistory, () => {
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.clearHistory, () => {
         context.workspaceState.update('history', []);
     }))
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_IDs.autoResolve, autoResolve));
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.autoResolve, autoResolve));
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
