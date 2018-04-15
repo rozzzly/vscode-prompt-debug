@@ -35,10 +35,10 @@ export function getWorkspaces(): PotentiallyFauxWorkspaceFolder[] | null {
 export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFauxWorkspaceFolder | null {
     const ws = getWorkspaces();
     if (ws) {
-        if (workspaceName) {
+        if (workspaceName && isMultiRootSupported) {
             return ws.find(w => w.name === workspaceName) || null;
         } else {
-            return (ws.length === 1 && ws[0].faux) ? ws[0] : null;
+            return (ws.length === 1) ? ws[0] : null;
         }
     } else {
         return null
@@ -85,11 +85,11 @@ export async function getWorkspaceFolder(resource?: LooseUri): Promise<Potential
 }
 
 export async function getWorkspaceFolderUri(resource?: LooseUri): Promise<Uri | null> {
-    return getWorkspaceFolder(resource).then(ws => (ws && ws.uri) || null);
+    return getWorkspaceFolder(resource).then(ws => ws ? ws.uri : null);
 }
 
 export async function getWorkspaceFolderPath(resource?: LooseUri): Promise<string | null> {
-    return getWorkspaceFolder(resource).then(ws => (ws && ws.uri.fsPath) || null);
+    return getWorkspaceFolder(resource).then(ws => ws ? ws.uri.fsPath : null);
 }
 
 export function config(resource?: Uri): WorkspaceConfiguration {

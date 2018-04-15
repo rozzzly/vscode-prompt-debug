@@ -36,7 +36,7 @@ export type COMMAND_ID_FRAGMENTS = keyof typeof COMMAND_IDs;
 export const COMMAND_CANONICAL_IDs: {
     [K in COMMAND_ID_FRAGMENTS]: string
 } = Object.keys(COMMAND_IDs).reduce(
-    (reduction, value, key) => ({
+    (reduction, key) => ({
         ...reduction,
         [key]: `${PREFIX}.${key}`
     }), {}

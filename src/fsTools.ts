@@ -1,10 +1,13 @@
+import { homedir } from 'os';
 import * as path from 'path';
 import * as fs from 'fs-extra-promise';
 import * as vscode from 'vscode';
 import { workspace, Uri, window as vsWindow } from 'vscode';
-import { substitute } from './substitution';
+import { substitute, containsSubstitution } from './substitution';
 import { POINT_CONVERSION_COMPRESSED } from 'constants';
 import { isMultiRootSupported, isCaseInsensitive } from './compat';
+
+export const homeDir = homedir();
 
 export function getActiveFilePath(): string | null {
     if (vsWindow.activeTextEditor) {
@@ -25,7 +28,20 @@ export type LooseUri = string | Uri;
 
 export async function toUri(value: LooseUri): Promise<Uri> {
     if (typeof value === 'string') {
-        return substitute(value).then((v) => Uri.file(v));
+        if (containsSubstitution(value)) {
+            const subbed = await substitute(value);
+            if (path.isAbsolute(subbed)) {
+                return Uri.file(subbed);
+            } else {
+                throw new URIError('path MUST be absolute');
+            }
+        } else {
+            if (path.isAbsolute(value)) {
+                return Uri.file(value);
+            } else {
+                throw new URIError('path MUST be absolute');
+            }
+        }
     } else {
         return value;
     }
@@ -33,7 +49,20 @@ export async function toUri(value: LooseUri): Promise<Uri> {
 
 export async function toPath(value: LooseUri): Promise<string> {
     if (typeof value === 'string') {
-        return substitute(value);
+        if (containsSubstitution(value)) {
+            const subbed = await substitute(value);
+            if (path.isAbsolute(subbed)) {
+                return subbed;
+            } else {
+                throw new URIError('path MUST be absolute');
+            }
+        } else {
+            if (path.isAbsolute(value)) {
+                return value;
+            } else {
+                throw new URIError('path MUST be absolute');
+            }
+        }
     } else {
         return value.fsPath;
     }

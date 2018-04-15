@@ -46,12 +46,11 @@ export interface AutoResolverScript {
 export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();
     if (activeFileUri) {
-        console.log(vscode.version);
-        /// TODO ::: detect vscode < v1.18 and do not use activeFileUri overload
         const cfg = config(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript)
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
-        const scriptPath = await fsTools.resolveToPath(await substitute(cfg));
+            console.log('before resolveToPath')
+            const scriptPath = await fsTools.resolveToPath(await substitute(cfg));
             console.log('scriptPath: ', scriptPath);
             if (scriptPath) { // check to see if script could be located
                  if (await ensureTsNode()) {
@@ -100,24 +99,22 @@ export default async (): Promise<string | null> => {
                             return resolved;
                         } else {
                             loadFailed = true;
-                            console.log('autoResolve function not exported by the imported script');
+                            throw new Error('autoResolve function not exported by the imported script');
                         }
                     } else {
                         loadFailed = true;
-                        console.log('autoResolve script could not be required');
+                        throw new Error('autoResolve script could not be required');
                     }
                 } else {
-                    console.log('tsNode failed to load', );
-                    throw new Error('cant load tsNode!');
+                    throw new Error('cannot load tsNode!');
                 }
             } else {
                 throw new Error('cannot find script');
             }
         } else {
-            console.log('cannot auto resolve, no autoResolveScript');
+            throw new Error('cannot auto resolve, no autoResolveScript');
         }
     } else {
-        console.log('no active file');
+        throw new Error('no active file');
     }
-    return null;
 }

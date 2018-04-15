@@ -98,23 +98,23 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
                 throw new Error('User did not supply a file.');
             }
         }
-        const file = await resolveToPath(potentialFile);
-        if (!file) {
-            vscode.window.showErrorMessage('Could not find the specified file.');
-            throw new URIError(`Could not find the specified file: '${potentialFile}'`);
+        if (potentialFile) {
+            const file = await resolveToPath(potentialFile);
+            if (!file) {
+                vscode.window.showErrorMessage('Could not find the specified file.');
+                throw new URIError(`Could not find the specified file: '${potentialFile}'`);
+            } else {
+                updateHistory(context, file);
+                return file;
+            }
         } else {
-            updateHistory(context, file);
-            return file;
+            throw new Error('User did not make a choice.');
         }
     } else {
         throw new Error('User did not make a choice.');
     }
 }
 export function activate(context: vscode.ExtensionContext) {
-
-    log('extension started!');
-    log(vscode.Uri.file('./'))
-    log(vscode.Uri.file('./package.json'))
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.prompt, promptForFile));
 
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.resolve, async (): Promise<string> => {
@@ -137,7 +137,15 @@ export function activate(context: vscode.ExtensionContext) {
         context.workspaceState.update('history', []);
     }))
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.autoResolve, autoResolve));
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.autoResolve, async () => {
+        let ret = null;
+        try {
+            ret = await autoResolve();
+        } catch(e) {
+            log('Error!!', e);
+        }
+        return ret;
+    }));
 }
 
 export function deactivate(context: vscode.ExtensionContext) {

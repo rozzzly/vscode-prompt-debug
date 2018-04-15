@@ -1,7 +1,9 @@
 import * as path from 'path';
 import { workspace, commands,  } from 'vscode';
-import { getActiveFilePath, getActiveFileUri, relative } from './fsTools';
+import { getActiveFilePath, getActiveFileUri, relative, homeDir } from './fsTools';
 import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspaceFolderByName } from './compat';
+
+const userHome: RegExp = /^~/;
 
 const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\s\S]*?\})/g
 const subEscapeExtractor: RegExp = /\$\{(\s*\S+[\s\S]*?)\}/g;
@@ -99,12 +101,13 @@ const defaultHandlers: SubPatternHandler[] = [
     }
 ];
 
-export const containsSubstitutions = (str: string): boolean => (
-    subEscapeSplitter.test(str)
+export const containsSubstitution = (str: string): boolean => (
+    str.includes('${') && subEscapeSplitter.test(str)
 );
 
 export const substitute = (str: string, handlers: SubPatternHandler[] = defaultHandlers): Promise<string> => (
     Promise.all((str)
+        .replace(userHome, homeDir)
         .split(subEscapeSplitter)
         .map(piece => new Promise<string>((resolve, reject) => {
             const outerMatch = subEscapeExtractor.exec(piece);
@@ -136,5 +139,5 @@ export const substitute = (str: string, handlers: SubPatternHandler[] = defaultH
                 resolve(piece);
             }
         }))
-    ).then(pieces => pieces.join())
+    ).then(pieces => path.join(...pieces))
 );
