@@ -29,6 +29,7 @@
         "fs-extra-promise": "^1.0.1",
         "semver": "^5.5.0",
         "ts-node": "^5.0.1",
+        "vm2": "^3.5.2",
         "vscode": "^1.1.14"
     },
     "devDependencies": {

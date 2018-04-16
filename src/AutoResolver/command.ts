@@ -1,11 +1,12 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
 import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from './constants';
-import * as fsTools from './fsTools';
+import * as fsTools from '../fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from './substitution';
 import { resolve } from 'dns';
-import { config } from './compat';
+import { config } from '../compat';
+import { AutoResolverScript } from '../AutoResolver';
 
 let tsNode: typeof _tsNode | null | false = null;
 let loadFailed: boolean = false;
@@ -32,16 +33,8 @@ async function ensureTsNode(): Promise<boolean> {
         throw new TypeError('unexpected value')
     }
 }
-export type FsTools = typeof fsTools;
-export interface ResolverContext extends FsTools {
-}
 
-export type SyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => string | null;
-export type AsyncAutoResolver = (activeFilePath: string, ctx: ResolverContext) => Promise<string | null>;
-export type AutoResolver = SyncAutoResolver | AsyncAutoResolver;
-export interface AutoResolverScript {
-    autoResolve: AutoResolver;
-}
+
 
 export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();

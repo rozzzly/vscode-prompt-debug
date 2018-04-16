@@ -3,7 +3,7 @@ import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
 import { resolveToPath, getActiveFilePath } from './fsTools';
-import autoResolve from './autoResolve';
+import autoResolve from './AutoResolver/command';
 import { EALREADY } from 'constants';
 import { COMMAND_CANONICAL_IDs } from './constants';
 
