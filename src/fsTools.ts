@@ -2,12 +2,16 @@ import { homedir } from 'os';
 import * as path from 'path';
 import * as fs from 'fs-extra-promise';
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
 import { workspace, Uri, window as vsWindow } from 'vscode';
 import { substitute, containsSubstitution } from './substitution';
 import { POINT_CONVERSION_COMPRESSED } from 'constants';
 import { isMultiRootSupported, isCaseInsensitive } from './compat';
+import { reject } from 'bluebird';
+import { on } from 'cluster';
 
-export const homeDir = homedir();
+export const homeDirPath: string = homedir();
+export const homeDiUri: Uri = Uri.file(homeDirPath);
 
 export function getActiveFilePath(): string | null {
     if (vsWindow.activeTextEditor) {
@@ -87,6 +91,34 @@ export async function resolveToPath(resource: string): Promise<string | null> {
 export async function lastModified(filePath: LooseUri): Promise<number> {
     return (await fs.statAsync(await toPath(filePath))).mtimeMs;
 }
+
+export async function openFile(resource: LooseUri) {
+    const path = await toPath(resource);
+    return fs.createReadStream(path);
+}
+
+export const fileHash = (resource: Uri): Promise<string | null> => (
+    new Promise<string | null>(async (resolve, reject) => {
+        try {
+            const stream = fs.createReadStream(resource.fsPath)
+            stream.on('error', (e) => {
+                console.log(e);
+                resolve(null);
+            } );
+            const hash = crypto.createHash('md5').setEncoding('hex');
+            hash.on('finish', () => {
+                /// TODO ::: investigate stream cleanup
+                // stream.close();
+                // stream.destroy();
+                resolve(hash.read() as string);
+            });
+            stream.pipe(hash);
+        } catch (e) {
+            console.error(e);
+            resolve(null);
+        }
+    })
+);
 
 export async function fileExists(filePath: LooseUri): Promise<boolean> {
     try {

@@ -1,5 +1,7 @@
+import * as fsTools from '../fsTools';
 
 
+export type FsTools = typeof fsTools;
 export interface ResolverContext extends FsTools {
 }
 

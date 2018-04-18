@@ -1,10 +1,9 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
-import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from './constants';
+import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../constants';
 import * as fsTools from '../fsTools';
 import * as _tsNode from 'ts-node';
-import { substitute } from './substitution';
-import { resolve } from 'dns';
+import { substitute } from '../substitution';
 import { config } from '../compat';
 import { AutoResolverScript } from '../AutoResolver';
 
