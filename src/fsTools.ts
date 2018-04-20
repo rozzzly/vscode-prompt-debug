@@ -92,19 +92,14 @@ export async function lastModified(filePath: LooseUri): Promise<number> {
     return (await fs.statAsync(await toPath(filePath))).mtimeMs;
 }
 
-export async function openFile(resource: LooseUri) {
-    const path = await toPath(resource);
-    return fs.createReadStream(path);
-}
-
 export const fileHash = (resource: Uri): Promise<string | null> => (
-    new Promise<string | null>((resolve, reject) => {
+    new Promise<string | null>((resolve) => {
         try {
-            const stream = fs.createReadStream(resource.fsPath)
-            stream.on('error', (e) => {
+            const stream = fs.createReadStream(resource.fsPath);
+            stream.on('error', e => {
                 console.log(e);
                 resolve(null);
-            } );
+            });
             const hash = crypto.createHash('md5').setEncoding('hex');
             hash.on('finish', () => {
                 /// TODO ::: investigate stream cleanup

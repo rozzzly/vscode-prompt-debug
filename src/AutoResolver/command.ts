@@ -29,7 +29,7 @@ async function ensureTsNode(): Promise<boolean> {
     } else if (tsNode === false) { // loading ts-node failed
         return false;
     } else {
-        throw new TypeError('unexpected value')
+        throw new TypeError('unexpected value');
     }
 }
 
@@ -38,10 +38,10 @@ async function ensureTsNode(): Promise<boolean> {
 export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();
     if (activeFileUri) {
-        const cfg = config(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript)
+        const cfg = config(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript);
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
-            console.log('before resolveToPath')
+            console.log('before resolveToPath');
             const scriptPath = await fsTools.resolveToPath(await substitute(cfg));
             console.log('scriptPath: ', scriptPath);
             if (scriptPath) { // check to see if script could be located
@@ -53,7 +53,7 @@ export default async (): Promise<string | null> => {
                             try {
                                 decache(scriptPath); // remove any cached versions (so file changes are respected)
                                 script = await import(scriptPath);
-                            } catch(e) {
+                            } catch (e) {
                                 cacheInfo = null;
                                 loadFailed = true;
                                 script = null;
@@ -65,7 +65,7 @@ export default async (): Promise<string | null> => {
                     } else {
                         try {
                             script = await import(scriptPath);
-                        } catch(e) {
+                        } catch (e) {
                             loadFailed = true;
                             script = null;
                             console.log('loading auto resolve script failed', e);
@@ -109,4 +109,4 @@ export default async (): Promise<string | null> => {
     } else {
         throw new Error('no active file');
     }
-}
+};

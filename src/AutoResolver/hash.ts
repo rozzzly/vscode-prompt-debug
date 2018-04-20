@@ -1,7 +1,7 @@
-import { Uri, ExtensionContext } from "vscode";
-import { LooseUri } from "../fsTools";
-import { isArray } from "util";
-import { isCaseInsensitive } from "../compat";
+import { Uri, ExtensionContext } from 'vscode';
+import { LooseUri } from '../fsTools';
+import { isArray } from 'util';
+import { isCaseInsensitive } from '../compat';
 
 const HISTORY_LIMIT: number = 25;
 const HISTORY_KEY: string = 'AutoResolver:hashStore';
@@ -106,5 +106,5 @@ export function store(context: ExtensionContext, resource: ScriptHash): void {
         hashes.splice(idx, 1);
     }
     const serialized = serialize([{...resource, lastUse: Date.now() }, ...hashes]);
-    context.globalState.update(HISTORY_KEY, serialized)
+    context.globalState.update(HISTORY_KEY, serialized);
 }
