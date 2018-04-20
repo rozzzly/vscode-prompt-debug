@@ -15,7 +15,7 @@ export const isWorkspaceOpen = (): boolean => (
 
 export type PotentiallyFauxWorkspaceFolder = WorkspaceFolder & { faux?: true };
 
-export function getWorkspaces(): PotentiallyFauxWorkspaceFolder[] | null {
+export function getWorkspaceFolders(): PotentiallyFauxWorkspaceFolder[] | null {
     if (isWorkspaceOpen()) {
         if (isMultiRootSupported) {
             return workspace.workspaceFolders as PotentiallyFauxWorkspaceFolder[];
@@ -33,39 +33,40 @@ export function getWorkspaces(): PotentiallyFauxWorkspaceFolder[] | null {
 }
 
 export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFauxWorkspaceFolder | null {
-    const ws = getWorkspaces();
+    const ws = getWorkspaceFolders();
     if (ws) {
-        if (workspaceName && isMultiRootSupported) {
-            return ws.find(w => w.name === workspaceName) || null;
+        if (workspaceName) {
+            if (isMultiRootSupported) {
+                return ws.find(w => w.name === workspaceName) || null;
+            } else {
+                throw new ReferenceError('Workspace name given when workspaces are not supported!');
+            }
         } else {
             return (ws.length === 1) ? ws[0] : null;
         }
     } else {
-        return null
+        return null;
     }
 }
 
 
-export async function getWorkspaceFolder(resource?: LooseUri): Promise<PotentiallyFauxWorkspaceFolder | null> {
+export function getWorkspaceFolder(resource?: Uri): PotentiallyFauxWorkspaceFolder | null {
     if (isWorkspaceOpen()) {
        if (resource) {
             if (isMultiRootSupported) {
-                const res = await toUri(resource);
-                const ws = workspace.getWorkspaceFolder(res);
+                const ws = workspace.getWorkspaceFolder(resource);
                 return (ws) ? ws : null;
             } else {
-                return ((isDescendent(resource, workspace.rootPath!))
-                    .then(isChild => ((isChild)
-                        ? ({
-                            index: 0,
-                            faux: true as true,
-                            name: path.basename(workspace.rootPath!),
-                            uri: Uri.file(workspace.rootPath!)
-                        }) : (
-                            null
-                        )
-                    ))
-                );
+                if (isDescendent(resource, Uri.file(workspace.rootPath!))) {
+                    return {
+                        index: 0,
+                        faux: true as true,
+                        name: path.basename(workspace.rootPath!),
+                        uri: Uri.file(workspace.rootPath!)
+                    };
+                } else {
+                    return null;
+                }
             }
         } else {
             if (isMultiRootSupported) {
@@ -84,12 +85,14 @@ export async function getWorkspaceFolder(resource?: LooseUri): Promise<Potential
     }
 }
 
-export async function getWorkspaceFolderUri(resource?: LooseUri): Promise<Uri | null> {
-    return getWorkspaceFolder(resource).then(ws => ws ? ws.uri : null);
+export function getWorkspaceFolderUri(resource?: Uri): Uri | null {
+    const ws = getWorkspaceFolder(resource);
+    return (ws) ? ws.uri : null;
 }
 
-export async function getWorkspaceFolderPath(resource?: LooseUri): Promise<string | null> {
-    return getWorkspaceFolder(resource).then(ws => ws ? ws.uri.fsPath : null);
+export async function getWorkspaceFolderPath(resource?: Uri): Promise<string | null> {
+    const ws = getWorkspaceFolder(resource);
+    return (ws) ? ws.uri.fsPath : null;
 }
 
 export function config(resource?: Uri): WorkspaceConfiguration {

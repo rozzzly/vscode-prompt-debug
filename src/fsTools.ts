@@ -11,7 +11,7 @@ import { reject } from 'bluebird';
 import { on } from 'cluster';
 
 export const homeDirPath: string = homedir();
-export const homeDiUri: Uri = Uri.file(homeDirPath);
+export const homeDirUri: Uri = Uri.file(homeDirPath);
 
 export function getActiveFilePath(): string | null {
     if (vsWindow.activeTextEditor) {
@@ -72,12 +72,15 @@ export async function toPath(value: LooseUri): Promise<string> {
     }
 }
 
-export async function relative(resource: LooseUri, base: LooseUri): Promise<string>;
-export async function relative(_resource: LooseUri, _base: LooseUri): Promise<string> {
-    const resource = await toPath(_resource);
-    const base = await toPath(_base);
-    return path.relative(resource, base);
-}
+
+export const relativePath = (resource: Uri, base: Uri): string => (
+    path.relative(resource.fsPath, base.fsPath)
+);
+
+
+export const relativeUri = (resource: Uri, base: Uri): Uri => (
+    Uri.file(relativePath(resource, base))
+);
 
 export async function resolveToUri(resource: string): Promise<Uri | null> {
     const uri = await toUri(resource);
@@ -88,8 +91,8 @@ export async function resolveToPath(resource: string): Promise<string | null> {
     return uri ? uri.fsPath : null;
 }
 
-export async function lastModified(filePath: LooseUri): Promise<number> {
-    return (await fs.statAsync(await toPath(filePath))).mtimeMs;
+export async function lastModified(filePath: Uri): Promise<number> {
+    return (await fs.statAsync(filePath.fsPath)).mtimeMs;
 }
 
 export const fileHash = (resource: Uri): Promise<string | null> => (
@@ -115,39 +118,36 @@ export const fileHash = (resource: Uri): Promise<string | null> => (
     })
 );
 
-export async function fileExists(filePath: LooseUri): Promise<boolean> {
+export async function fileExists(filePath: Uri): Promise<boolean> {
     try {
-        return (await fs.statAsync(await toPath(filePath))).isFile();
+        return (await fs.statAsync(filePath.fsPath)).isFile();
     } catch (e) {
         return false;
     }
 }
 
-export async function dirExists(dirPath: LooseUri): Promise<boolean> {
+export async function dirExists(dirPath: Uri): Promise<boolean> {
     try {
-        return (await fs.statAsync(await toPath(dirPath))).isDirectory();
+        return (await fs.statAsync(dirPath.fsPath)).isDirectory();
     } catch (e) {
         return false;
     }
 }
 
-export async function exists(resource: LooseUri): Promise<boolean> {
+export async function exists(resource: Uri): Promise<boolean> {
     try {
-        return !!await fs.statAsync(await toPath(resource));
+        return !!await fs.statAsync(resource.fsPath);
     } catch (e) {
         return false;
     }
 }
 
-export async function isDescendent(resource: LooseUri, base: LooseUri): Promise<boolean>;
-export async function isDescendent(_resource: LooseUri, _base: LooseUri): Promise<boolean> {
-    const resource = await toPath(_resource);
-    const base = await toPath(_base);
 
-    const resourceParts = path.normalize(isCaseInsensitive ? resource.toLocaleLowerCase() : resource).split(path.sep);
-    const baseParts = path.normalize(isCaseInsensitive ? base.toLocaleLowerCase() : base).split(path.sep);
+export function isDescendent(resource: Uri, base: Uri): boolean {
+    const resourceParts = path.normalize(isCaseInsensitive ? resource.fsPath.toLowerCase() : resource.fsPath).split(path.sep);
+    const baseParts = path.normalize(isCaseInsensitive ? base.fsPath.toLowerCase() : base.fsPath).split(path.sep);
 
-    if (baseParts.length > resource.length) {
+    if (baseParts.length > resourceParts.length) {
         return false;
     } else {
         for (let i = 0; i < baseParts.length; i++) {

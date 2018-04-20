@@ -3,7 +3,7 @@ import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
 import { resolveToPath, getActiveFilePath } from './fsTools';
-import autoResolve from './AutoResolver/command';
+import autoResolve from './Resolver/AutoResolver/command';
 import { EALREADY } from 'constants';
 import { COMMAND_CANONICAL_IDs } from './constants';
 import { workspace } from 'vscode';
@@ -115,6 +115,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
         throw new Error('User did not make a choice.');
     }
 }
+
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.prompt, promptForFile));
 
@@ -133,16 +134,16 @@ export function activate(context: vscode.ExtensionContext) {
             throw new URIError('Failed to choose a file to launch debug session for.');
         }
     }));
-    
+
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.clearHistory, () => {
         context.workspaceState.update('history', []);
-    }))
+    }));
 
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.autoResolve, async () => {
         let ret = null;
         try {
             ret = await autoResolve();
-        } catch(e) {
+        } catch (e) {
             log('Error!!', e);
         }
         return ret;
