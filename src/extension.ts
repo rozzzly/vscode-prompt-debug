@@ -6,6 +6,7 @@ import { resolveToPath, getActiveFilePath } from './fsTools';
 import autoResolve from './AutoResolver/command';
 import { EALREADY } from 'constants';
 import { COMMAND_CANONICAL_IDs } from './constants';
+import { workspace } from 'vscode';
 
 
 
@@ -132,7 +133,7 @@ export function activate(context: vscode.ExtensionContext) {
             throw new URIError('Failed to choose a file to launch debug session for.');
         }
     }));
-
+    
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.clearHistory, () => {
         context.workspaceState.update('history', []);
     }))

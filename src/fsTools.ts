@@ -98,7 +98,7 @@ export async function openFile(resource: LooseUri) {
 }
 
 export const fileHash = (resource: Uri): Promise<string | null> => (
-    new Promise<string | null>(async (resolve, reject) => {
+    new Promise<string | null>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath)
             stream.on('error', (e) => {
