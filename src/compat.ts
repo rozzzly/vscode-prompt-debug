@@ -50,7 +50,7 @@ export function getWorkspaceFolderByName(workspaceName?: string): PotentiallyFau
 }
 
 
-export function getWorkspaceFolder(resource?: Uri): PotentiallyFauxWorkspaceFolder | null {
+export function getWorkspaceFolder(resource?: Uri | null): PotentiallyFauxWorkspaceFolder | null {
     if (isWorkspaceOpen()) {
        if (resource) {
             if (isMultiRootSupported) {
@@ -90,7 +90,7 @@ export function getWorkspaceFolderUri(resource?: Uri): Uri | null {
     return (ws) ? ws.uri : null;
 }
 
-export async function getWorkspaceFolderPath(resource?: Uri): Promise<string | null> {
+export function getWorkspaceFolderPath(resource?: Uri): string | null {
     const ws = getWorkspaceFolder(resource);
     return (ws) ? ws.uri.fsPath : null;
 }

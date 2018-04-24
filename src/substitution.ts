@@ -5,107 +5,108 @@ import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspace
 
 const userHome: RegExp = /^~/;
 
-const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\s\S]*?\})/g
+const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\s\S]*?\})/g;
 const subEscapeExtractor: RegExp = /\$\{(\s*\S+[\s\S]*?)\}/g;
 
 
-export type SubstitutionContext<C extends {} = {}> = (
-    & {
-        activeFile: Uri | null;
-        workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
-    }
-    & {
-        [K in keyof C]: C[K];
-    }
-);
+export interface SubstitutionContext {
+    activeFile: Uri | null;
+    workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
+}
 
-export type SimpleSubPatternHandler<C extends {} = {}> = {
+
+export interface Substitution {
+    pattern: string | RegExp;
+    resolver(ctx: SubstitutionContext, ...value: string[]): string | Promise<string>;
+}
+
+
+export interface SimpleSubstitution extends Substitution {
     pattern: string;
-    resolver(ctx: SubstitutionContext<C>): string | Promise<string>;
-};
+    resolver(ctx: SubstitutionContext): string | Promise<string>;
+}
 
-export type ParameterizedSubPatternHandler<C extends {} = {}> = {
+export interface ParameterizedSubstitution extends Substitution {
     pattern: RegExp;
-    resolver(ctx: SubstitutionContext<C>, ...value: string[]): string | Promise<string>;
-};
+    resolver(ctx: SubstitutionContext, ...value: string[]): string | Promise<string>;
+}
 
-export type Substitution = (
-    | SimpleSubPatternHandler
-    | ParameterizedSubPatternHandler
-);
+export const isSimple = (value: any): value is SimpleSubstitution => typeof value.pattern === 'string';
+export const isParameterized = (value: any): value is ParameterizedSubstitution => value.pattern instanceof RegExp;
 
-export const isSimple = (value: any): value is SimpleSubPatternHandler => typeof value.pattern === 'string';
-export const isParameterized = (value: any): value is ParameterizedSubPatternHandler => !isSimple(value);
 
 export const defaultSubstitutions: Substitution[] = [
     {
         pattern: /command\:([\s\S]+)/,
-        async resolver(ctx, command: string): Promise<string> {
+        async resolver(ctx, command): Promise<string> {
             const cmds = await commands.getCommands();
             if (cmds.includes(command)) {
                 return commands.executeCommand<string>(command).then(out => out || '');
             } else {
-                throw new TypeError('unregistered command.')
+                throw new TypeError('unregistered command.');
             }
         }
     },
     {
-        pattern: /file/,
+        pattern: 'file',
         resolver(ctx): string {
             if (ctx.activeFile) {
-                return ctx.activeFile.;
+                return ctx.activeFile.fsPath;
             } else {
-                throw new TypeError('No open file.')
+                throw new TypeError('No open file.');
             }
         }
     },
     {
         pattern: /relativeFile/,
-        async resolver(): Promise<string> {
-            const activeFile = getActiveFileUri();
-            if (activeFile) {
-                if (isWorkspaceOpen()) {
-                    const ws = await getWorkspaceFolder(activeFile);
-                    if (ws) {
-                        return relativePath(activeFile, ws.uri);
-                    } else {
-                        throw new TypeError('Could not find workspace for this resource!')
-                    }
+        async resolver(ctx): Promise<string> {
+            if (ctx.activeFile) {
+                if (ctx.workspaceFolder) {
+                    return relativePath(ctx.activeFile, ctx.workspaceFolder.uri);
+                } else if (isWorkspaceOpen()) {
+                    throw new TypeError('No open workspaces containing that resource.');
                 } else {
-                    throw new TypeError('No open workspaces.')
+                    throw new TypeError('No open workspaces.');
                 }
             } else {
-                throw new TypeError('No open file.')
+                throw new TypeError('No open file.');
             }
         }
     },
     {
-        pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+)\:)?Basename)/,
+        pattern: /rootPath|workspaceFolder(?:\:([^\.]+)\:)?Basename/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
-                const ws = getWorkspaceFolderByName(workspaceName)
+                const ws = ((workspaceName)
+                    ? getWorkspaceFolderByName(workspaceName)
+                    : ctx.workspaceFolder
+                );
+
                 if (ws) {
                     return path.basename(ws.uri.fsPath);
                 } else {
                     throw new TypeError('Could not find workspace for that resource!');
                 }
              } else {
-                throw new TypeError('No open workspaces.')
+                throw new TypeError('No open workspaces.');
             }
         }
     },
     {
-        pattern: /(?:rootPath|workspaceFolder(?:\:([^\.]+))?)/,
+        pattern: /rootPath|workspaceFolder(?:\:([^\.]+))?/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
-                const ws = getWorkspaceFolderByName(workspaceName)
+                const ws = ((workspaceName)
+                    ? getWorkspaceFolderByName(workspaceName)
+                    : ctx.workspaceFolder
+                );
                 if (ws) {
                     return ws.uri.fsPath;
                 } else {
                     throw new TypeError('Could not find workspace for that resource!');
                 }
             } else {
-                throw new TypeError('No open workspaces.')
+                throw new TypeError('No open workspaces.');
             }
         }
     }
@@ -117,14 +118,18 @@ export const containsSubstitution = (str: string): boolean => (
 
 
 
-export function createContext<C extends {} = {}>(custom?: C): SubstitutionContext & C {
-    const ctx = { ...(custom || {}) } as SubstitutionContext & C;
+export function createContext(): SubstitutionContext {
+    const ctx = { } as SubstitutionContext;
     ctx.activeFile = getActiveFileUri();
-    ctx.workspaceFolder =  (ctx.activeFile) ? getWorkspaceFolder(ctx.activeFile) : null;
+    ctx.workspaceFolder = getWorkspaceFolder(ctx.activeFile);
     return ctx;
 }
 
-export const substitute = <C extends {} = {}>(str: string, ctx: SubstitutionContext & C = createContext<C>(), subs: Substitution[] = defaultSubstitutions): Promise<string> => (
+export const substitute = (
+    str: string,
+    subs: Substitution[] = defaultSubstitutions,
+    ctx: SubstitutionContext = createContext()
+): Promise<string> => (
     Promise.all((str)
         .replace(userHome, homeDirUri.fsPath)
         .split(subEscapeSplitter)
@@ -134,16 +139,16 @@ export const substitute = <C extends {} = {}>(str: string, ctx: SubstitutionCont
                 const subExpression = outerMatch[1];
                 let innerMatch: RegExpExecArray | null = null;
                 const handler = subs.find(sub => {
-                    if (isSimple(sub)) {
-                        return subExpression === sub.pattern;
-                    } else {
+                    if (isParameterized(sub)) {
                         innerMatch = sub.pattern.exec(subExpression);
-                        return !!innerMatch && innerMatch[0] === subExpression; // make sure match is a complete match
+                        return !!innerMatch && innerMatch[0] === subExpression; // make sure match is a complete (end to end) match
+                    } else {
+                        return subExpression === sub.pattern;
                     }
                 });
                 if (handler) {
                     if (isSimple(handler)) {
-                        resolve(handler.resolver(ctx))
+                        resolve(handler.resolver(ctx));
                     } else {
                         const [_, ...parameters] = innerMatch!;
                         resolve(handler.resolver(ctx, ...parameters));

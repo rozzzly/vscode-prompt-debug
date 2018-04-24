@@ -7,7 +7,6 @@ import { workspace, Uri, window as vsWindow } from 'vscode';
 import { substitute, containsSubstitution } from './substitution';
 import { POINT_CONVERSION_COMPRESSED } from 'constants';
 import { isMultiRootSupported, isCaseInsensitive } from './compat';
-import { reject } from 'bluebird';
 import { on } from 'cluster';
 
 export const homeDirPath: string = homedir();
@@ -77,11 +76,6 @@ export const relativePath = (resource: Uri, base: Uri): string => (
     path.relative(resource.fsPath, base.fsPath)
 );
 
-
-export const relativeUri = (resource: Uri, base: Uri): Uri => (
-    Uri.file(relativePath(resource, base))
-);
-
 export async function resolveToUri(resource: string): Promise<Uri | null> {
     const uri = await toUri(resource);
     return (await exists(uri)) ? uri : null;
@@ -95,13 +89,17 @@ export async function lastModified(filePath: Uri): Promise<number> {
     return (await fs.statAsync(filePath.fsPath)).mtimeMs;
 }
 
-export const fileHash = (resource: Uri): Promise<string | null> => (
-    new Promise<string | null>((resolve) => {
+export const fileHash = (resource: Uri, rejectOnError: boolean = false): Promise<string | null> => (
+    new Promise<string | null>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath);
             stream.on('error', e => {
-                console.log(e);
-                resolve(null);
+                if (rejectOnError) {
+                    reject(e);
+                } else {
+                    console.log(e);
+                    resolve(null);
+                }
             });
             const hash = crypto.createHash('md5').setEncoding('hex');
             hash.on('finish', () => {
@@ -112,8 +110,12 @@ export const fileHash = (resource: Uri): Promise<string | null> => (
             });
             stream.pipe(hash);
         } catch (e) {
-            console.error(e);
-            resolve(null);
+            if (rejectOnError) {
+                reject(e);
+            } else {
+                console.log(e);
+                resolve(null);
+            }
         }
     })
 );
