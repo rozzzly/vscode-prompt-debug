@@ -1,10 +1,10 @@
 import * as decache from 'decache';
 import * as vscode from 'vscode';
-import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../constants';
-import * as fsTools from '../fsTools';
+import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../../constants';
+import * as fsTools from '../../fsTools';
 import * as _tsNode from 'ts-node';
-import { substitute } from '../substitution';
-import { config } from '../compat';
+import { substitute } from '../../substitution';
+import { config } from '../../compat';
 import { AutoResolverScript } from '../AutoResolver';
 
 let tsNode: typeof _tsNode | null | false = null;
@@ -42,17 +42,17 @@ export default async (): Promise<string | null> => {
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
             console.log('before resolveToPath');
-            const scriptPath = await fsTools.resolveToPath(await substitute(cfg));
-            console.log('scriptPath: ', scriptPath);
-            if (scriptPath) { // check to see if script could be located
+            const scriptUri = await fsTools.resolveToUri(await substitute(cfg));
+            console.log('scriptPath: ', scriptUri);
+            if (scriptUri) { // check to see if script could be located
                  if (await ensureTsNode()) {
                     console.log('tsNode resolved:', tsNode);
                     let script: AutoResolverScript | null = null;
                     if (cacheInfo) { // first time using this command
-                        if (loadFailed || cacheInfo.scriptPath === scriptPath && cacheInfo.timestamp !== await fsTools.lastModified(scriptPath)) {
+                        if (loadFailed || cacheInfo.scriptPath === scriptUri.fsPath && cacheInfo.timestamp !== await fsTools.lastModified(scriptUri)) {
                             try {
-                                decache(scriptPath); // remove any cached versions (so file changes are respected)
-                                script = await import(scriptPath);
+                                decache(scriptUri); // remove any cached versions (so file changes are respected)
+                                script = await import(scriptUri.fsPath);
                             } catch (e) {
                                 cacheInfo = null;
                                 loadFailed = true;
@@ -64,7 +64,7 @@ export default async (): Promise<string | null> => {
                         }
                     } else {
                         try {
-                            script = await import(scriptPath);
+                            script = await import(scriptUri.fsPath);
                         } catch (e) {
                             loadFailed = true;
                             script = null;
@@ -85,8 +85,8 @@ export default async (): Promise<string | null> => {
                             console.log('resolved value: ', resolved);
                             cacheInfo = {
                                 script,
-                                scriptPath,
-                                timestamp: await fsTools.lastModified(scriptPath)
+                                scriptPath: scriptUri.fsPath,
+                                timestamp: await fsTools.lastModified(scriptUri)
                             };
                             return resolved;
                         } else {

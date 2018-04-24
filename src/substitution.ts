@@ -4,36 +4,34 @@ import { getActiveFilePath, getActiveFileUri, relativePath, homeDirUri } from '.
 import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspaceFolderByName, PotentiallyFauxWorkspaceFolder } from './compat';
 
 const userHome: RegExp = /^~/;
+const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\S\s]*?\s*\})/g;
+const subEscapeExtractor: RegExp = /\$\{\s*(\S+[\S\s]*?)\s*\}/g;
 
-const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\s\S]*?\})/g;
-const subEscapeExtractor: RegExp = /\$\{(\s*\S+[\s\S]*?)\}/g;
 
-
-export interface SubstitutionContext {
+export interface SubstitutionContext<D extends {} = {}> {
+    data: D;
     activeFile: Uri | null;
     workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
 }
 
-
-export interface Substitution {
+export interface Substitution<D extends {} = {}> {
     pattern: string | RegExp;
-    resolver(ctx: SubstitutionContext, ...value: string[]): string | Promise<string>;
+    resolver(ctx: SubstitutionContext<D>, ...value: string[]): string | Promise<string>;
 }
 
-
-export interface SimpleSubstitution extends Substitution {
+export interface SimpleSubstitution<D extends {} = {}> extends Substitution<D> {
     pattern: string;
-    resolver(ctx: SubstitutionContext): string | Promise<string>;
+    resolver(ctx: SubstitutionContext<D>): string | Promise<string>;
 }
 
-export interface ParameterizedSubstitution extends Substitution {
+export interface ParameterizedSubstitution<D extends {} = D> extends Substitution<D> {
     pattern: RegExp;
-    resolver(ctx: SubstitutionContext, ...value: string[]): string | Promise<string>;
+    resolver(ctx: SubstitutionContext<D>, ...value: string[]): string | Promise<string>;
 }
+
 
 export const isSimple = (value: any): value is SimpleSubstitution => typeof value.pattern === 'string';
 export const isParameterized = (value: any): value is ParameterizedSubstitution => value.pattern instanceof RegExp;
-
 
 export const defaultSubstitutions: Substitution[] = [
     {
@@ -81,7 +79,6 @@ export const defaultSubstitutions: Substitution[] = [
                     ? getWorkspaceFolderByName(workspaceName)
                     : ctx.workspaceFolder
                 );
-
                 if (ws) {
                     return path.basename(ws.uri.fsPath);
                 } else {
@@ -118,8 +115,8 @@ export const containsSubstitution = (str: string): boolean => (
 
 
 
-export function createContext(): SubstitutionContext {
-    const ctx = { } as SubstitutionContext;
+export function createContext<D extends {} = {}>(data: D = {} as D): SubstitutionContext<D> {
+    const ctx = { data } as SubstitutionContext<D>;
     ctx.activeFile = getActiveFileUri();
     ctx.workspaceFolder = getWorkspaceFolder(ctx.activeFile);
     return ctx;
@@ -136,7 +133,7 @@ export const substitute = (
         .map(piece => new Promise<string>((resolve, reject) => {
             const outerMatch = subEscapeExtractor.exec(piece);
             if (outerMatch) {
-                const subExpression = outerMatch[1];
+                const subExpression = outerMatch[1].trim();
                 let innerMatch: RegExpExecArray | null = null;
                 const handler = subs.find(sub => {
                     if (isParameterized(sub)) {

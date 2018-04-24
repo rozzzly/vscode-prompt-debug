@@ -1,4 +1,5 @@
 import { Substitution, defaultSubstitutions } from '../substitution';
+import { ExecSyncOptionsWithBufferEncoding } from 'child_process';
 
 export interface PatternOptions {
     basename?: boolean;
@@ -19,43 +20,53 @@ export const defaultOptions: PatternOptions = {
     dot: false,
 };
 
-export const getOptions = (opts: PatternOptions = {}): PatternOptions => ({
+export const getOptions = (opts: PatternOptions = {}, ...inherits: PatternOptions[]): PatternOptions => ({
     ...defaultOptions,
     ...opts
 });
 
+export type SimplePatternInput = string;
+export type CustomizedPatternInput = [
+    SimplePatternInput,
+    PatternOptions
+];
 
-
-export type BasicPattern = (
-    | string
-    | [
-        string,
-        PatternOptions
-    ]
-);
-
-export type MultiPattern = (
-    | string[]
-    | [
-        string, PatternOptions
-    ][]
-    | [
-        string[], PatternOptions
-    ]
-);
-
-export type Pattern = (
-    | BasicPattern
-    | MultiPattern
+export type PatternInput = (
+    | SimplePatternInput
+    | (
+        | SimplePatternInput
+        | CustomizedPatternInput
+    )[]
 );
 
 export interface PatternResolver {
-    in: string;
-    out: string;
+    input: PatternInput;
+
+    output: string;
 }
 
-const substitutions: Substitution[] = [
+export interface SubstitutionPatternContext extends Array<string> {
+
+}
+
+const substitutions: Substitution<SubstitutionPatternContext>[] = [
     ...defaultSubstitutions,
-    substitutions(): derp {        
+    {
+        pattern: /glob:(\d+)/,
+        resolver(ctx, indexStr): string {
+            const index = Number.parseInt(indexStr);
+            if (typeof index === 'number' && index >= 0 && index < ctx.data.length) {
+                return ctx.data[index];
+            } else {
+                throw new RangeError('Glob index out of range!');
+            }
+
+        }
+    },
+    {
+        pattern: /glob\:count/,
+        resolver(ctx): string {
+            return String(ctx.data.length);
+        }
     }
-]
+];
