@@ -1,4 +1,4 @@
-import * as fsTools from '../fsTools';
+import * as fsTools from '../../fsTools';
 
 
 export type FsTools = typeof fsTools;

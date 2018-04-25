@@ -1,7 +1,7 @@
 import { Uri, ExtensionContext } from 'vscode';
-import { LooseUri } from '../fsTools';
+import { LooseUri } from '../../fsTools';
 import { isArray } from 'util';
-import { isCaseInsensitive } from '../compat';
+import { isCaseInsensitive } from '../../compat';
 
 const HISTORY_LIMIT: number = 25;
 const HISTORY_KEY: string = 'AutoResolver:hashStore';

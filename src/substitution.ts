@@ -4,9 +4,8 @@ import { getActiveFilePath, getActiveFileUri, relativePath, homeDirUri } from '.
 import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspaceFolderByName, PotentiallyFauxWorkspaceFolder } from './compat';
 
 const userHome: RegExp = /^~/;
-const subEscapeSplitter: RegExp = /(\$\{\s*\S+[\S\s]*?\s*\})/g;
-const subEscapeExtractor: RegExp = /\$\{\s*(\S+[\S\s]*?)\s*\}/g;
-
+const subEscapeSplitter: RegExp = /(\$\{\s*\S+?[\S\s]*?\s*\})/g;
+const subEscapeExtractor: RegExp = /\$\{\s*(\S+?[\S\s]*?)\s*\}/g;
 
 export interface SubstitutionContext<D extends {} = {}> {
     data: D;
@@ -113,14 +112,17 @@ export const containsSubstitution = (str: string): boolean => (
     str.includes('${') && subEscapeSplitter.test(str)
 );
 
-
-
 export function createContext<D extends {} = {}>(data: D = {} as D): SubstitutionContext<D> {
     const ctx = { data } as SubstitutionContext<D>;
     ctx.activeFile = getActiveFileUri();
     ctx.workspaceFolder = getWorkspaceFolder(ctx.activeFile);
     return ctx;
 }
+
+
+/**
+ * @see https://github.com/Microsoft/vscode/blob/master/src/vs/workbench/services/configurationResolver/node/variableResolver.ts
+ */
 
 export const substitute = (
     str: string,

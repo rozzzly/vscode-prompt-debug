@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as semver from 'semver';
-import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration } from 'vscode';
-import { LooseUri, isDescendent, toUri } from './fsTools';
+import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext } from 'vscode';
+import { LooseUri, isDescendent, toUri, dirExists, fileExists } from './fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
 
 export const isCaseInsensitive = process.platform === 'win32';
@@ -100,5 +100,35 @@ export function config(resource?: Uri): WorkspaceConfiguration {
         return workspace.getConfiguration(PREFIX, resource);
     } else {
         return workspace.getConfiguration(PREFIX);
+    }
+}
+
+export let userConfigUri: Uri | null = null;
+
+export async function findUserConfig(context: ExtensionContext): Promise<Uri | null> {
+    if (userConfigUri) {
+        return userConfigUri;
+    } else {
+        if (context.storagePath) {
+            const userDir = path.join(...context.storagePath.split(path.sep).slice(0, -3));
+            console.log('userDir', userDir);
+            if (!await dirExists(Uri.file(userDir))) {
+                console.error('process.cwd does not contain "User" dir', userDir);
+                return null;
+            } else {
+                const userConfigPath = path.join(userDir, 'settings.json');
+                console.log(userConfigPath);
+                if (!await fileExists(Uri.file(userConfigPath))) {
+                    console.error('Could not find user config in expected location', userConfigPath);
+                    return null;
+                } else {
+                    userConfigUri = Uri.file(userConfigPath);
+                    return userConfigUri;
+                }
+            }
+        } else {
+            console.error('context.storagePath is undefined!');
+            return null;
+        }
     }
 }
