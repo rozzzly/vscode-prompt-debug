@@ -1,13 +1,12 @@
-import { homedir } from 'os';
 import * as path from 'path';
 import * as fs from 'fs-extra-promise';
-import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import * as JSON6 from 'json-6';
+import { homedir } from 'os';
 import { workspace, Uri, window as vsWindow } from 'vscode';
 import { substitute, containsSubstitution } from './substitution';
-import { POINT_CONVERSION_COMPRESSED } from 'constants';
 import { isMultiRootSupported, isCaseInsensitive } from './compat';
-import { on } from 'cluster';
+
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
@@ -85,19 +84,27 @@ export async function resolveToPath(resource: string): Promise<string | null> {
     return uri ? uri.fsPath : null;
 }
 
-export async function lastModified(filePath: Uri): Promise<number> {
+export async function lastModified(filePath: Uri): Promise<number | null>;
+export async function lastModified(filePath: Uri, suppressErrors: true): Promise<number | null>;
+export async function lastModified(filePath: Uri, suppressErrors: false): Promise<number>;
+export async function lastModified(filePath: Uri, suppressErrors: boolean = true): Promise<number| null> {
     return (await fs.statAsync(filePath.fsPath)).mtimeMs;
 }
 
-export const fileHash = (resource: Uri, rejectOnError: boolean = false): Promise<string | null> => (
-    new Promise<string | null>((resolve, reject) => {
+
+export function fileHash(resource: Uri): Promise<string | null>;
+export function fileHash(resource: Uri, suppressErrors: true): Promise<string | null>;
+export function fileHash(resource: Uri, suppressErrors: false): Promise<string>;
+export function fileHash(resource: Uri, suppressErrors: boolean): Promise<string | null>;
+export function fileHash(resource: Uri, suppressErrors: boolean = false): Promise<string | null> {
+    return new Promise<string | null>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath);
             stream.on('error', e => {
-                if (rejectOnError) {
+                if (suppressErrors) {
                     reject(e);
-                } else {
-                    console.log(e);
+                 } else {
+                    console.error(e);
                     resolve(null);
                 }
             });
@@ -110,37 +117,70 @@ export const fileHash = (resource: Uri, rejectOnError: boolean = false): Promise
             });
             stream.pipe(hash);
         } catch (e) {
-            if (rejectOnError) {
-                reject(e);
-            } else {
-                console.log(e);
+            if (suppressErrors) {
+                console.error(e);
                 resolve(null);
+            } else {
+                reject(e);
             }
         }
-    })
-);
+    });
+}
 
-export async function fileExists(filePath: Uri): Promise<boolean> {
-    try {
-        return (await fs.statAsync(filePath.fsPath)).isFile();
-    } catch (e) {
-        return false;
+export async function fileExists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
+    if (suppressErrors) {
+        try {
+            return await fileExists(resource, false);
+        } catch (e) {
+            console.error({ e, resource });
+            return false;
+        }
+    } else {
+        return (await fs.statAsync(resource.fsPath)).isFile();
     }
 }
 
-export async function dirExists(dirPath: Uri): Promise<boolean> {
-    try {
-        return (await fs.statAsync(dirPath.fsPath)).isDirectory();
-    } catch (e) {
-        return false;
+export async function dirExists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
+    if (suppressErrors) {
+        try {
+            return await dirExists(resource, false);
+        } catch (e) {
+            console.error({ e, resource });
+            return false;
+        }
+    } else {
+        return (await fs.statAsync(resource.fsPath)).isDirectory();
     }
 }
 
-export async function exists(resource: Uri): Promise<boolean> {
-    try {
+export async function exists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
+    if (suppressErrors) {
+        try {
+            return await exists(resource, false);
+        } catch (e) {
+            console.error({ e, resource });
+            return false;
+        }
+    } else {
         return !!await fs.statAsync(resource.fsPath);
-    } catch (e) {
-        return false;
+    }
+}
+
+const encodings: BufferEncoding[] = ['utf8', 'utf16le', 'ucs2', 'base64', 'ascii', 'latin1', 'binary', 'hex'];
+
+export async function readFile(resource: Uri): Promise<string | null>;
+export async function readFile(resource: Uri, suppressErrors: true): Promise<string | null>;
+export async function readFile(resource: Uri, suppressErrors: false): Promise<string>;
+export async function readFile(resource: Uri, suppressErrors: boolean = true): Promise<string | null> {
+    if (suppressErrors) {
+        try {
+            return await readFile(resource, false);
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    } else {
+        return (await fs.readFileAsync(resource.fsPath)).toString();
     }
 }
 

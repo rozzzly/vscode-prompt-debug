@@ -4,7 +4,7 @@ import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../../constants';
 import * as fsTools from '../../fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from '../../substitution';
-import { config } from '../../compat';
+import { configFor } from '../../compat';
 import { AutoResolverScript } from '../AutoResolver';
 
 let tsNode: typeof _tsNode | null | false = null;
@@ -38,7 +38,7 @@ async function ensureTsNode(): Promise<boolean> {
 export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();
     if (activeFileUri) {
-        const cfg = config(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript);
+        const cfg = configFor(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript);
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
             console.log('before resolveToPath');
@@ -86,7 +86,7 @@ export default async (): Promise<string | null> => {
                             cacheInfo = {
                                 script,
                                 scriptPath: scriptUri.fsPath,
-                                timestamp: await fsTools.lastModified(scriptUri)
+                                timestamp: await fsTools.lastModified(scriptUri, false)
                             };
                             return resolved;
                         } else {

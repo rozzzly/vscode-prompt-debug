@@ -7,7 +7,7 @@ import autoResolve from './Resolver/AutoResolver/command';
 import { EALREADY } from 'constants';
 import { COMMAND_CANONICAL_IDs } from './constants';
 import { workspace } from 'vscode';
-import { findUserConfig } from './compat';
+import { findUserConfig, compareToUserConfig } from './compat';
 
 
 
@@ -118,7 +118,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    findUserConfig(context);
+    findUserConfig(context).then(() => compareToUserConfig('foo', 'bar'));
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.prompt, promptForFile));
 
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.resolve, async (): Promise<string> => {

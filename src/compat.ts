@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as semver from 'semver';
+import * as JSON6 from 'json-6';
 import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext } from 'vscode';
-import { LooseUri, isDescendent, toUri, dirExists, fileExists } from './fsTools';
+import { LooseUri, isDescendent, toUri, dirExists, fileExists, readFile } from './fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
 
 export const isCaseInsensitive = process.platform === 'win32';
@@ -95,7 +96,7 @@ export function getWorkspaceFolderPath(resource?: Uri): string | null {
     return (ws) ? ws.uri.fsPath : null;
 }
 
-export function config(resource?: Uri): WorkspaceConfiguration {
+export function configFor(resource?: Uri): WorkspaceConfiguration {
     if (resource && isMultiRootSupported) {
         return workspace.getConfiguration(PREFIX, resource);
     } else {
@@ -130,5 +131,17 @@ export async function findUserConfig(context: ExtensionContext): Promise<Uri | n
             console.error('context.storagePath is undefined!');
             return null;
         }
+    }
+}
+
+export async function compareToUserConfig(key: string, value: string): Promise<boolean> {
+    if (userConfigUri) {
+        const content = await readFile(userConfigUri);
+        const config = JSON6.parse(content);
+        console.log(config);
+        return true;
+    } else {
+        console.error('user config not located');
+        return false;
     }
 }
