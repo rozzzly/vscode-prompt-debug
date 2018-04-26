@@ -1,9 +1,11 @@
 import * as path from 'path';
 import * as semver from 'semver';
 import * as JSON6 from 'json-6';
+
 import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext } from 'vscode';
 import { LooseUri, isDescendent, toUri, dirExists, fileExists, readFile } from './fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
+import { join } from 'bluebird';
 
 export const isCaseInsensitive = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
@@ -133,12 +135,61 @@ export async function findUserConfig(context: ExtensionContext): Promise<Uri | n
         }
     }
 }
+export const configKeyNotFound: unique symbol = Symbol('configKeyNotFound'); /// TODO ::: namespace this
+export type configKeyNotFound = typeof configKeyNotFound; /// TODO ::: namespace this
+
+export function configLookup<T>(config: object, key: string): T | configKeyNotFound;
+export function configLookup<T, K>(config: object, key: string, defaultValue: T): T | K;
+export function configLookup<T>(config: object, key: string, defaultValue: T | configKeyNotFound = configKeyNotFound): T | configKeyNotFound {
+    let node: any = config;
+    let allParts = key.split('.');
+    let parts: string[] = [...allParts];
+    let unusedParts: string[] = [];
+    let selectedKeys: string[] = [];
+    let found: boolean = false;
+    while (true) {
+        const keys = Object.keys(node);
+        const joined = parts.join('.');
+        if (keys.includes(joined)) {
+            selectedKeys.push(joined);
+            if (unusedParts.length) {
+                node = node[joined];
+                parts = [...unusedParts];
+                unusedParts = [];
+            } else {
+                return node[joined];
+            }
+        } else if (parts.length > 1) {
+            const left = parts.slice(0, -1);
+            const right = parts.slice(-1);
+            unusedParts = [...right, ...unusedParts];
+            parts = [...left]; // will have 1 or more items
+        } else {
+            if (defaultValue !== configKeyNotFound) return defaultValue;
+            else return configKeyNotFound;
+        }
+    }
+}
 
 export async function compareToUserConfig(key: string, value: string): Promise<boolean> {
     if (userConfigUri) {
         const content = await readFile(userConfigUri);
         const config = JSON6.parse(content);
         console.log(config);
+        const v = configLookup({
+            'a': {
+                'b.c': {
+                    d: 'result(a - b.c - d)'
+                },
+                'b.c.d': 'result(a - b.c.d)'
+            },
+            'a.b': {
+                'c.d': 'result(a.b - c.d) ** should win',
+                c: {
+                    d: 'result(a.b - c - d)'
+                }
+            }
+        }, 'a.b.c.d');
         return true;
     } else {
         console.error('user config not located');
