@@ -7,7 +7,8 @@ export const PREFIX = 'prompt-debug';
 
 
 export const CONFIG_IDs = {
-    autoResolveScript: 'autoResolveScript'
+    scriptResolver: 'scriptResolver',
+    globResolver: 'globResolver'
 };
 export type CONFIG_ID_FRAGMENTS = keyof typeof CONFIG_IDs;
 
@@ -26,9 +27,10 @@ export const CONFIG_CANONICAL_IDs: {
 
 export const COMMAND_IDs = {
     resolve: 'resolve',
-    prompt: 'prompt',
     clearHistory: 'clearHistory',
-    autoResolve: 'autoResolve'
+    resolveViaGlob: 'resolveViaGlob',
+    resolveViaScript: 'resolveViaScript',
+    resolveViaPrompt: 'resolveViaPrompt'
 };
 
 export type COMMAND_ID_FRAGMENTS = keyof typeof COMMAND_IDs;

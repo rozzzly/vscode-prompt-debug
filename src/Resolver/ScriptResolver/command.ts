@@ -1,15 +1,15 @@
 import * as decache from 'decache';
-import * as vscode from 'vscode';
+import { Uri } from 'vscode';
 import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../../constants';
 import * as fsTools from '../../fsTools';
 import * as _tsNode from 'ts-node';
 import { substitute } from '../../substitution';
 import { configFor } from '../../compat';
-import { AutoResolverScript } from '../AutoResolver';
+import { ScriptResolverScript } from '../ScriptResolver';
 
 let tsNode: typeof _tsNode | null | false = null;
 let loadFailed: boolean = false;
-let cacheInfo: { scriptPath: string; timestamp: number; script: AutoResolverScript; } | null = null;
+let cacheInfo: { scriptPath: string; timestamp: number; script: ScriptResolverScript; } | null = null;
 
 async function ensureTsNode(): Promise<boolean> {
     if (tsNode) { // ts node has already been loaded
@@ -34,11 +34,10 @@ async function ensureTsNode(): Promise<boolean> {
 }
 
 
-
 export default async (): Promise<string | null> => {
     const activeFileUri = fsTools.getActiveFileUri();
     if (activeFileUri) {
-        const cfg = configFor(activeFileUri).get<string>(CONFIG_IDs.autoResolveScript);
+        const cfg = configFor(activeFileUri).get<string>(CONFIG_IDs.scriptResolver);
         console.log('cfg:', cfg);
         if (typeof cfg === 'string' && cfg.length > 0) {
             console.log('before resolveToPath');
@@ -47,7 +46,7 @@ export default async (): Promise<string | null> => {
             if (scriptUri) { // check to see if script could be located
                  if (await ensureTsNode()) {
                     console.log('tsNode resolved:', tsNode);
-                    let script: AutoResolverScript | null = null;
+                    let script: ScriptResolverScript | null = null;
                     if (cacheInfo) { // first time using this command
                         if (loadFailed || cacheInfo.scriptPath === scriptUri.fsPath && cacheInfo.timestamp !== await fsTools.lastModified(scriptUri)) {
                             try {
@@ -72,12 +71,12 @@ export default async (): Promise<string | null> => {
                         }
                     }
                     if (script) {
-                        if ('autoResolve' in script && typeof script.autoResolve === 'function') {
+                        if ('resolve' in script && typeof script.resolve === 'function') {
                             loadFailed = false;
                             console.log('autoResolveScript matches expected shape', script);
-                            let resolved: string | null = null;
+                            let resolved: string | Uri | null = null;
                             try {
-                                resolved = await script.autoResolve(activeFileUri.fsPath, {} as any);
+                                resolved = await script.resolve(activeFileUri.fsPath, {} as any);
                             } catch (e) {
                                 resolved = null;
                                 console.log('autoResolve func failed:', e);
@@ -88,7 +87,11 @@ export default async (): Promise<string | null> => {
                                 scriptPath: scriptUri.fsPath,
                                 timestamp: await fsTools.lastModified(scriptUri, false)
                             };
-                            return resolved;
+                            if (resolved instanceof Uri) {
+                                return resolved.fsPath;
+                            } else {
+                                return resolved;
+                            }
                         } else {
                             loadFailed = true;
                             throw new Error('autoResolve function not exported by the imported script');

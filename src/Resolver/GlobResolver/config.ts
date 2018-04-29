@@ -18,7 +18,7 @@ export interface PatternOptions {
     unescape?: boolean;
 }
 
-export const defaultOptions: PatternOptions = {
+const defaultOptions: PatternOptions = {
     basename: false,
     bash: true,
     dot: false,
@@ -32,10 +32,10 @@ export const mergeOptions = (opts: PatternOptions = {}, ...parents: PatternOptio
     (objVal: any, srcVal: any, key: any): any => {
         if (key === 'ignore') {
             if (Array.isArray(objVal)) {
-                if (Array.isArray(srcVal) && srcVal.length >= 0) {
+                if (Array.isArray(srcVal) && srcVal.length >= 1) {
                     if (srcVal[0] === INHERITS_KEYWORD) {
                         return uniq([...objVal, ...srcVal.slice(1)]);
-                    } else if (srcVal[length - 1] === INHERITS_KEYWORD) {
+                    } else if (srcVal[srcVal.length - 1] === INHERITS_KEYWORD) {
                         return uniq([...srcVal.slice(0, -1), ...objVal]);
                     } else {
                         return srcVal;
@@ -46,10 +46,10 @@ export const mergeOptions = (opts: PatternOptions = {}, ...parents: PatternOptio
                     return srcVal;
                 }
             } else if (typeof objVal === 'string') {
-                if (Array.isArray(srcVal) && srcVal.length >= 0) {
+                if (Array.isArray(srcVal) && srcVal.length >= 1) {
                     if (srcVal[0] === INHERITS_KEYWORD) {
                         return uniq([objVal, ...srcVal.slice(1)]);
-                    } else if (srcVal[length - 1] === INHERITS_KEYWORD) {
+                    } else if (srcVal[srcVal.length - 1] === INHERITS_KEYWORD) {
                         return uniq([...srcVal.slice(0, -1), objVal]);
                     } else {
                         return srcVal;
@@ -65,10 +65,10 @@ export const mergeOptions = (opts: PatternOptions = {}, ...parents: PatternOptio
 );
 
 export type SimplePatternInput = string;
-export type CustomizedPatternInput = [
-    SimplePatternInput,
-    PatternOptions
-];
+export interface CustomizedPatternInput { 
+    pattern: SimplePatternInput;
+    options?: PatternOptions;
+};
 
 export type PatternInput = (
     | SimplePatternInput

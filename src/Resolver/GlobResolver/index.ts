@@ -1,7 +1,7 @@
 import { Substitution, defaultSubstitutions } from '../../substitution';
 
-export interface PatternContext extends Array<string> {
-
+export interface PatternContext {
+    glob: string[];
 }
 
 const globSubstitutions: Substitution<PatternContext>[] = [
@@ -11,7 +11,7 @@ const globSubstitutions: Substitution<PatternContext>[] = [
         resolver(ctx, indexStr): string {
             const index = Number.parseInt(indexStr);
             if (typeof index === 'number' && index >= 0 && index < ctx.data.length) {
-                return ctx.data[index];
+                return ctx.data.glob[index];
             } else {
                 throw new RangeError('Glob index out of range!');
             }
@@ -21,7 +21,7 @@ const globSubstitutions: Substitution<PatternContext>[] = [
     {
         pattern: /glob\:count/,
         resolver(ctx): string {
-            return String(ctx.data.length);
+            return String(ctx.data.glob.length);
         }
     }
 ];

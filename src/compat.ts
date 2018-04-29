@@ -5,7 +5,8 @@ import * as JSON6 from 'json-6';
 import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext } from 'vscode';
 import { LooseUri, isDescendent, toUri, dirExists, fileExists, readFile } from './fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
-import { join } from 'bluebird';
+import { isEqual } from 'lodash';
+import { isArray } from 'util';
 
 export const isCaseInsensitive = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
@@ -98,6 +99,12 @@ export function getWorkspaceFolderPath(resource?: Uri): string | null {
     return (ws) ? ws.uri.fsPath : null;
 }
 
+export type ConfigScope = (
+    | 'user'
+    | 'workspace'
+    | 'workspaceFolders'
+);
+
 export function configFor(resource?: Uri): WorkspaceConfiguration {
     if (resource && isMultiRootSupported) {
         return workspace.getConfiguration(PREFIX, resource);
@@ -138,9 +145,9 @@ export async function findUserConfig(context: ExtensionContext): Promise<Uri | n
 export const configKeyNotFound: unique symbol = Symbol('configKeyNotFound'); /// TODO ::: namespace this
 export type configKeyNotFound = typeof configKeyNotFound; /// TODO ::: namespace this
 
-export function configLookup<T>(config: object, key: string): T | configKeyNotFound;
-export function configLookup<T, K>(config: object, key: string, defaultValue: T): T | K;
-export function configLookup<T>(config: object, key: string, defaultValue: T | configKeyNotFound = configKeyNotFound): T | configKeyNotFound {
+export function objLookup<T>(config: object, key: string): T | configKeyNotFound;
+export function objLookup<T, D>(config: object, key: string, defaultValue: T): T | D;
+export function objLookup<T>(config: object, key: string, defaultValue: T | configKeyNotFound = configKeyNotFound): T | configKeyNotFound {
     let node: any = config;
     let allParts = key.split('.');
     let parts: string[] = [...allParts];
@@ -171,28 +178,29 @@ export function configLookup<T>(config: object, key: string, defaultValue: T | c
     }
 }
 
-export async function compareToUserConfig(key: string, value: string): Promise<boolean> {
+export async function getUserConfig(): Promise<object | null>;
+export async function getUserConfig(suppressErrors: false): Promise<object>;
+export async function getUserConfig(suppressErrors: true): Promise<object | null>;
+export async function getUserConfig(suppressErrors: boolean = true): Promise<object | null> {
     if (userConfigUri) {
-        const content = await readFile(userConfigUri);
-        const config = JSON6.parse(content);
-        console.log(config);
-        const v = configLookup({
-            'a': {
-                'b.c': {
-                    d: 'result(a - b.c - d)'
-                },
-                'b.c.d': 'result(a - b.c.d)'
-            },
-            'a.b': {
-                'c.d': 'result(a.b - c.d) ** should win',
-                c: {
-                    d: 'result(a.b - c - d)'
-                }
+        if (suppressErrors) {
+            try {
+                const config = await getUserConfig(false);
+                return config;
+            } catch (e) {
+                console.error(e);
+                return null;
             }
-        }, 'a.b.c.d');
-        return true;
+        } else {
+            const content = await readFile(userConfigUri);
+            return JSON6.parse(content);
+        }
     } else {
-        console.error('user config not located');
-        return false;
+        if (suppressErrors) {
+            console.error('user config has not been located');
+            return null;
+        } else {
+            throw new Error('user config has not been located');
+        }
     }
 }

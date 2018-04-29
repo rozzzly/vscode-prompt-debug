@@ -3,11 +3,9 @@ import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
 import { resolveToPath, getActiveFilePath } from './fsTools';
-import autoResolve from './Resolver/AutoResolver/command';
-import { EALREADY } from 'constants';
 import { COMMAND_CANONICAL_IDs } from './constants';
 import { workspace } from 'vscode';
-import { findUserConfig, compareToUserConfig } from './compat';
+import { findUserConfig } from './compat';
 
 
 
@@ -118,8 +116,7 @@ async function promptForFile(context: vscode.ExtensionContext): Promise<string> 
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    findUserConfig(context).then(() => compareToUserConfig('foo', 'bar'));
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.prompt, promptForFile));
+    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.resolveViaPrompt, promptForFile));
 
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.resolve, async (): Promise<string> => {
         // if choice is stale/no choice made, re-prompt user.
@@ -141,15 +138,6 @@ export function activate(context: vscode.ExtensionContext) {
         context.workspaceState.update('history', []);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.autoResolve, async () => {
-        let ret = null;
-        try {
-            ret = await autoResolve();
-        } catch (e) {
-            log('Error!!', e);
-        }
-        return ret;
-    }));
 }
 
 export function deactivate(context: vscode.ExtensionContext) {

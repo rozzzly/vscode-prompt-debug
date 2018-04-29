@@ -25,7 +25,7 @@
         "url": "https://github.com/Microsoft/vscode-prompt-debug/issues"
     },
     "dependencies": {
-        "@types/lodash": "^4.14.107",
+        "@types/lodash": "^4.14.108",
         "@types/micromatch": "^3.1.0",
         "decache": "^4.4.0",
         "fs-extra-promise": "^1.0.1",
@@ -33,16 +33,17 @@
         "lodash": "^4.17.10",
         "micromatch": "^3.1.10",
         "semver": "^5.5.0",
-        "ts-node": "^5.0.1",
+        "ts-node": "^6.0.1",
         "tslint": "^5.9.1",
         "vm2": "^3.5.2",
         "vscode": "^1.1.14"
     },
     "devDependencies": {
         "@types/fs-extra-promise": "^1.0.4",
-        "@types/node": "^9.6.4",
+        "@types/node": "^10.0.0",
         "@types/semver": "^5.5.0",
-        "typescript": "^2.9.0-dev.20180411"
+        "quokka": "0.0.7",
+        "typescript": "^2.9.0-dev.20180426"
     },
     "scripts": {
         "prepublish": "node ./node_modules/typescript/bin/tsc -p ./",
