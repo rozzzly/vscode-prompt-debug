@@ -17,7 +17,7 @@ export const isDisposer = (value: any): value is Disposer => (
 export const isDisposable = (value: any): value is Disposable => (
     typeof value === 'object'
     &&
-    'dispose' in value
+    Object.keys(value).includes('dispose')
     &&
     isDisposer(value.dispose)
 );
@@ -82,26 +82,43 @@ export function getHandle(ctx: ExtensionContext, obj: Disposer | Disposable): Di
         dispose(suppressErrors: boolean = false): void {
             if (handle.isDisposed) {
                 if (!suppressErrors) {
-                    console.error({ disposable, handle, obj, subscriptions: ctx.subscriptions });
+                    console.error({
+                        obj,
+                        handle,
+                        disposable,
+                        msg: 'Already Disposed.',
+                        subscriptions: ctx.subscriptions
+                     });
                     throw new ReferenceError('Already disposed!');
                 } else {
                     console.warn({
-                        msg: 'Already disposed.',
                         obj,
+                        handle,
+                        disposable,
+                        msg: 'Already disposed.',
                         subscriptions: ctx.subscriptions,
-                        handle
                     });
                     return;
                 }
             } else {
                 const idx = ctx.subscriptions.indexOf(handle);
                 if (idx !== -1) {
-                    disposable.dispose();
+                    if (isDisposableHandle(disposable)) {
+                        disposable.dispose(suppressErrors);
+                    } else {
+                        disposable.dispose();
+                    }
                     ctx.subscriptions.splice(idx, 1);
                     handle.isDisposed = true;
                 } else {
                     if (!suppressErrors) {
-                        console.error({ disposable, handle, obj, subscriptions: ctx.subscriptions });
+                        console.error({
+                            obj,
+                            handle,
+                            disposable,
+                            msg: 'Could not find among disposables.',
+                            subscriptions: ctx.subscriptions
+                         });
                         throw new ReferenceError('Could not find among disposables');
                     } else {
                         console.warn({

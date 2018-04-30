@@ -105,7 +105,7 @@ export type ConfigScope = (
     | 'workspaceFolders'
 );
 
-export function configFor(resource?: Uri): WorkspaceConfiguration {
+export function getConfig(resource?: Uri): WorkspaceConfiguration {
     if (resource && isMultiRootSupported) {
         return workspace.getConfiguration(PREFIX, resource);
     } else {

@@ -6,6 +6,7 @@ import { resolveToPath, getActiveFilePath } from './fsTools';
 import { COMMAND_CANONICAL_IDs } from './constants';
 import { workspace } from 'vscode';
 import { findUserConfig } from './compat';
+import { DisposableHandle } from './runtime';
 
 
 
@@ -141,5 +142,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
-    context.subscriptions.forEach(sub => sub.dispose());
+    context.subscriptions.forEach(sub => (sub as DisposableHandle).dispose(true));
 }

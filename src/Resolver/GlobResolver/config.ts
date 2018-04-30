@@ -1,11 +1,15 @@
-import { mergeWith, uniq } from 'lodash';
+import { mergeWith, uniq, isPlainObject, intersection, difference } from 'lodash';
 import { Substitution, defaultSubstitutions } from '../../substitution';
 import { ExecSyncOptionsWithBufferEncoding } from 'child_process';
-import { inherits } from 'util';
+import { inherits, isArray } from 'util';
+import { getActiveFileUri } from '../../fsTools';
+import { getConfig } from '../../compat';
+import { Uri } from 'vscode';
+import { COMMAND_IDs, CONFIG_IDs } from '../../constants';
 
 export const INHERITS_KEYWORD: string = '$-INHERIT-$';
 
-export interface PatternOptions {
+export interface GlobOptions {
     basename?: boolean;
     bash?: boolean;
     dot?: boolean;
@@ -18,16 +22,16 @@ export interface PatternOptions {
     unescape?: boolean;
 }
 
-const defaultOptions: PatternOptions = {
+const defaultOptions: GlobOptions = {
     basename: false,
     bash: true,
     dot: false,
 };
 
-export const mergeOptions = (opts: PatternOptions = {}, ...parents: PatternOptions[]): PatternOptions => mergeWith(
+const mergeOptions = (opts: GlobOptions = {}, ...parents: (GlobOptions | undefined)[]): GlobOptions => mergeWith(
     {},
     defaultOptions,
-    ...parents,
+    ...(parents.filter(parent => parent !== undefined)),
     opts,
     (objVal: any, srcVal: any, key: any): any => {
         if (key === 'ignore') {
@@ -64,27 +68,110 @@ export const mergeOptions = (opts: PatternOptions = {}, ...parents: PatternOptio
     }
 );
 
-export type SimplePatternInput = string;
-export interface CustomizedPatternInput { 
-    pattern: SimplePatternInput;
-    options?: PatternOptions;
-};
+export type SingleGlob = string;
+export type MultiGlob = SingleGlob[];
 
-export type PatternInput = (
-    | SimplePatternInput
-    | (
-        | SimplePatternInput
-        | CustomizedPatternInput
-    )[]
+export interface CustomizedGlob {
+    pattern: (
+        | SingleGlob
+        | MultiGlob
+    );
+    options?: GlobOptions;
+}
+
+export type GlobInput = (
+    | SingleGlob
+    | CustomizedGlob
+    | (SingleGlob | CustomizedGlob)[]
 );
 
-export interface PatternResolver {
-    input: PatternInput;
-    options?: PatternOptions;
+export interface GlobResolver {
+    input: GlobInput;
+    options?: GlobOptions;
     output: string;
 }
 
-export type PatternResolverConfig = (
-    | PatternResolver
-    | PatternResolver[]
+export interface ExplicitGlobResolver extends GlobResolver {
+    input: SingleGlob;
+    options: GlobOptions;
+    output: string;
+}
+
+export type GlobResolverConfig = (
+    | GlobResolver
+    | GlobResolver[]
 );
+
+export function getGlobResolverConfig(resource?: Uri): GlobResolver[] | null {
+    const cfgRoot = getConfig(resource);
+    if (cfgRoot.has(CONFIG_IDs.globResolver)) {
+        const cfg: GlobResolverConfig = cfgRoot.get(CONFIG_IDs.globResolver, []);
+        if (Array.isArray(cfg)) {
+            return cfg;
+        } else {
+            return [cfg];
+        }
+    } else {
+        return null;
+    }
+}
+
+const requiredResolverKeys = ['input', 'output'];
+const allowedResolverKeys = ['input', 'output', 'options'];
+
+function validateResolver(resolver: GlobResolver): true | string {
+    if (!isPlainObject(resolver)) {
+        return 'Expected an object defining a resolver.';
+    } else {
+        const keys = Object.keys(resolver);
+        const missing = requiredResolverKeys.reduce((reduction, requiredKey) => (
+            ((keys.includes(requiredKey)
+                ? reduction
+                : [...reduction, `The required key '${requiredKey}' is missing in this resolver definition!`]
+            )
+        )), []);
+        if (missing.length) {
+            return missing.join(' ');
+        } else {
+            const unexpected = difference(keys, allowedResolverKeys).reduce((reduction, unexpectedKey) => [
+                ...reduction,
+                `An unexpected key '${unexpectedKey}' was encountered in this resolver definition!`
+            ], []);
+            if (unexpected.length) {
+                return unexpected.join(' ');
+            } else {
+                if (keys.includes('options')) {
+                    /// TODO ::: validate options key
+                } else {
+                    return true;
+                }
+            }
+        }
+        return true;
+    }
+}
+
+export function normalizeResolverConfig(raw: GlobResolverConfig): ExplicitGlobResolver[];
+export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors: true): ExplicitGlobResolver[];
+export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors: false): ExplicitGlobResolver[] | null;
+export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors?: boolean): ExplicitGlobResolver[] | null;
+export function normalizeResolverConfig(_raw: GlobResolverConfig, suppressErrors: boolean = true): ExplicitGlobResolver[] {
+    const raw = Array.isArray(_raw) ? _raw : [_raw];
+    const result: ExplicitGlobResolver[] = [];
+
+    raw.forEach(resolver => {
+        if (isPlainObject(resolver)) {
+
+        } else {
+            if (suppressErrors) {
+                console.warn({
+                    raw: _raw,
+                    msg: 'unexpected resolver format'
+                    resolver
+                });
+            }
+        }
+    });
+
+    return result;
+}

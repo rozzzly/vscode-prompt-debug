@@ -12,7 +12,9 @@ export const registerCmds = (ctx: ExtensionContext): void => {
     handles = getHandleGroup(
         ctx,
         commands.registerCommand(cmdIDs.resolveViaGlob, resolveViaGlob),
+        /// TODO ::: add legacy cmd equivalent (if any)
         commands.registerCommand(cmdIDs.resolveViaScript, resolveViaScript)
+        /// TODO ::: add legacy cmd equivalent (if any)
     );
 };
 
