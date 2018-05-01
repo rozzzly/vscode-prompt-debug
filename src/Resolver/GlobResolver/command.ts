@@ -20,8 +20,6 @@ export default async (): Promise<string> => {
 
 export function matchGlob(resource: Uri, resolvers: GlobResolver[]): ExplicitGlobResolver[] {
     const results: ExplicitGlobResolver[] = [];
-    resolvers.forEach(resolver => {
-        if ()
-    });
+
     return [];
 }
