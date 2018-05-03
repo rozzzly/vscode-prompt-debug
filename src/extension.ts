@@ -30,7 +30,6 @@ interface HistoryRecord {
     uses: number;
 }
 
-
 function updateHistory(context: vscode.ExtensionContext, file: string): void {
     const oldHistory = context.workspaceState.get<HistoryRecord[]>('history', []);
     let foundInHistory: boolean = false;

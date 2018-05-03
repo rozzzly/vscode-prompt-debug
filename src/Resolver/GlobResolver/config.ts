@@ -6,21 +6,7 @@ import { getActiveFileUri } from '../../fsTools';
 import { getConfig } from '../../compat';
 import { Uri } from 'vscode';
 import { COMMAND_IDs, CONFIG_IDs } from '../../constants';
-
-export const INHERITS_KEYWORD: string = '$-INHERIT-$';
-
-export interface GlobOptions {
-    basename?: boolean;
-    bash?: boolean;
-    dot?: boolean;
-    ignore?: string | string[];
-    nobrace?: boolean;
-    nocase?: boolean;
-    noext?: boolean;
-    nonegate?: boolean;
-    noglobstar?: boolean;
-    unescape?: boolean;
-}
+import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, ExplicitGlobResolver, GlobResolver } from './config.jsonSchema';
 
 const defaultOptions: GlobOptions = {
     basename: false,
@@ -68,54 +54,6 @@ const mergeOptions = (opts: GlobOptions = {}, ...parents: (GlobOptions | undefin
     }
 );
 
-export type SingleGlob = string;
-export type MultiGlob = SingleGlob[];
-
-export interface CustomizedGlob {
-    pattern: (
-        | SingleGlob
-        | MultiGlob
-    );
-    options?: GlobOptions;
-}
-
-export type GlobInput = (
-    | SingleGlob
-    | CustomizedGlob
-    | (SingleGlob | CustomizedGlob)[]
-);
-
-export interface GlobResolver {
-    input: GlobInput;
-    options?: GlobOptions;
-    output: string;
-}
-
-export interface ExplicitGlobResolver extends GlobResolver {
-    input: SingleGlob;
-    options: GlobOptions;
-    output: string;
-}
-
-export type GlobResolverConfig = (
-    | GlobResolver
-    | GlobResolver[]
-);
-
-export function getGlobResolverConfig(resource?: Uri): GlobResolver[] | null {
-    const cfgRoot = getConfig(resource);
-    if (cfgRoot.has(CONFIG_IDs.globResolver)) {
-        const cfg: GlobResolverConfig = cfgRoot.get(CONFIG_IDs.globResolver, []);
-        if (Array.isArray(cfg)) {
-            return cfg;
-        } else {
-            return [cfg];
-        }
-    } else {
-        return null;
-    }
-}
-
 const requiredResolverKeys = ['input', 'output'];
 const allowedResolverKeys = ['input', 'output', 'options'];
 
@@ -161,12 +99,12 @@ export function normalizeResolverConfig(_raw: GlobResolverConfig, suppressErrors
 
     raw.forEach(resolver => {
         if (isPlainObject(resolver)) {
-
+            return;
         } else {
             if (suppressErrors) {
                 console.warn({
                     raw: _raw,
-                    msg: 'unexpected resolver format'
+                    msg: 'unexpected resolver format',
                     resolver
                 });
             }
@@ -174,4 +112,13 @@ export function normalizeResolverConfig(_raw: GlobResolverConfig, suppressErrors
     });
 
     return result;
+}
+
+export function getGlobResolverConfig(resource?: Uri): GlobResolverConfig | null {
+    const cfg = getConfig(resource);
+    if (cfg.has(CONFIG_IDs.globResolver)) {
+        return cfg.get(CONFIG_IDs.globResolver, null);
+    } else {
+        return null;
+    }
 }

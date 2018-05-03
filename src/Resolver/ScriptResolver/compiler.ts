@@ -12,5 +12,6 @@ export function getCompiler() {
             inlineSourceMap: true,
             inlineSources: true
         });
+        return compiler;
     }
 }

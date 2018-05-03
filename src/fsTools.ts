@@ -166,8 +166,6 @@ export async function exists(resource: Uri, suppressErrors: boolean = true): Pro
     }
 }
 
-const encodings: BufferEncoding[] = ['utf8', 'utf16le', 'ucs2', 'base64', 'ascii', 'latin1', 'binary', 'hex'];
-
 export async function readFile(resource: Uri): Promise<string | null>;
 export async function readFile(resource: Uri, suppressErrors: true): Promise<string | null>;
 export async function readFile(resource: Uri, suppressErrors: false): Promise<string>;

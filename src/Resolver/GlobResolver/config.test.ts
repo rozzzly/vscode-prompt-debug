@@ -1,4 +1,4 @@
-import { GlobResolverConfig } from './config';
+import { GlobResolverConfig } from './config.jsonSchema';
 
 const t1: GlobResolverConfig = {
     input: '${workspaceFolder}/src/**/*.ts',
