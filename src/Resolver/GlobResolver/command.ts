@@ -2,9 +2,8 @@ import * as mm from 'micromatch';
 
 import { workspace, Uri } from 'vscode';
 import { getActiveFileUri } from '../../fsTools';
-import { getGlobResolverConfig } from './config';
-import { GlobResolver, ExplicitGlobResolver } from './config.jsonSchema';
-import { resolve } from 'url';
+import { getGlobResolverConfig } from './configTools';
+import { GlobResolver, ExplicitGlobResolver } from './config';
 
 
 export default async (): Promise<string> => {

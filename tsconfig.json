@@ -24,8 +24,5 @@
     "node_modules",
     "out",
     ".vscode"
-  ],
-  "typeAcquisition": {
-      "enable": true
-  }
+  ]
 }

@@ -3,3 +3,5 @@ node_modules/
 out/
 npm-debug.log
 npm-debug.log.*
+.vscode-test
+coverage
