@@ -1,5 +1,5 @@
 {
-    "version": "0.2.0",
+    "version": "",
     "configurations": [
         {
             "name": "Debug",
@@ -9,6 +9,7 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
+            "outputCapture": "std",
             "stopOnEntry": false,
             "sourceMaps": true,
             "smartStep": true,
@@ -22,6 +23,7 @@
         },
         {
             "name": "Test",
+            //"outputCapture": "std",
             "type": "extensionHost",
             "request": "launch",
             "runtimeExecutable": "${execPath}",
@@ -29,15 +31,17 @@
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/out/test/jest-test-runner"
             ],
+            "autoAttachChildProcesses": true,
             "stopOnEntry": false,
             "sourceMaps": true,
             "smartStep": true,
+            "internalConsoleOptions": "neverOpen",
             "skipFiles": [
                 "<node_internals>/**/*.js"
             ],
             "preLaunchTask": "build",
             "outFiles": [
-                "out"
+                "${workspaceFolder}/out/**/*.js"
             ]
         }
     ]

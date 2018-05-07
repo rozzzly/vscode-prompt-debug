@@ -9,7 +9,7 @@
         "email": "pclienau@gmail.com"
     },
     "engines": {
-        "vscode": "^1.1.0",
+        "vscode": "^1.6.0",
         "node": "^7.4.0"
     },
     "icon": "img/icon.svg",
@@ -32,26 +32,26 @@
         "lodash": "^4.17.10",
         "micromatch": "^3.1.10",
         "semver": "^5.5.0",
-        "ts-node": "^6.0.2",
+        "ts-node": "^6.0.3",
         "vm2": "^3.5.2",
-        "vscode": "^1.1.17"
+        "vscode": "^1.1.17",
+        "ts-json-schema-generator": "^0.25.1"
     },
     "devDependencies": {
         "@types/ajv": "^1.0.0",
-        "@types/jest": "^22.2.3",
-        "@types/source-map-support": "^0.4.0",
         "@types/fs-extra-promise": "^1.0.5",
+        "@types/jest": "^22.2.3",
         "@types/lodash": "^4.14.108",
         "@types/micromatch": "^3.1.0",
         "@types/node": "^10.0.4",
         "@types/semver": "^5.5.0",
+        "@types/source-map-support": "^0.4.0",
         "jest": "^22.4.3",
         "jest-environment-node": "^22.4.3",
         "prettier": "^1.12.1",
         "source-map-support": "^0.5.5",
-        "tslint": "^5.10.0",
         "ts-jest": "^22.4.5",
-        "ts-json-schema-generator": "^0.24.6",
+        "tslint": "^5.10.0",
         "typescript": "^2.9.0-dev.20180426"
     },
     "scripts": {

@@ -8,12 +8,23 @@ const validator = new ajv({
     useDefaults: true
 });
 
+validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json')); // tslint:disable-line:no-var-requires
+
 const globResolverValidator = validator.compile(GlobResolverConfigSchema);
 
 export function validateGlobResolver(config: object): GlobResolverConfig | null;
-export function validateGlobResolver(config: object, suppressErrors: false): GlobResolverConfig;
-export function validateGlobResolver(config: object, suppressErrors: true): GlobResolverConfig | null;
-export function validateGlobResolver(_config: object, suppressErrors: boolean = true): GlobResolverConfig | null {
+export function validateGlobResolver(
+    config: object,
+    suppressErrors: false
+): GlobResolverConfig;
+export function validateGlobResolver(
+    config: object,
+    suppressErrors: true
+): GlobResolverConfig | null;
+export function validateGlobResolver(
+    _config: object,
+    suppressErrors: boolean = true
+): GlobResolverConfig | null {
     const config = { ..._config }; // clone so it's safe to mutate (validator.validate() does when useDefaults: true)
     const result: boolean = globResolverValidator(config) as boolean;
     if (result) {
@@ -33,7 +44,8 @@ export function validateGlobResolver(_config: object, suppressErrors: boolean = 
                 errors: globResolverValidator.errors
             });
             throw new TypeError(
-                'Validation of GlobResolverConfig failed: ' + validator.errorsText(globResolverValidator.errors!)
+                'Validation of GlobResolverConfig failed: ' +
+                    validator.errorsText(globResolverValidator.errors!)
             );
         }
     }

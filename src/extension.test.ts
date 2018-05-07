@@ -6,9 +6,7 @@ describe('Extension', () => {
         const context: ExtensionContext = {
             subscriptions: [],
         } as any;
-
         activate(context);
-    
         expect(context.subscriptions.length).toBeGreaterThan(0);
     });
 });

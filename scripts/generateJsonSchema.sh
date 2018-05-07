@@ -16,7 +16,7 @@ do
     echo 'export default ' >> $ROOT_DIR/src/configSchema/$TYPE.ts.tmp
     eval "$GEN_BIN --path $ROOT_DIR/tsconfig.json --type $TYPE >> $ROOT_DIR/src/configSchema/$TYPE.ts.tmp"
     echo ';' >> $ROOT_DIR/src/configSchema/$TYPE.ts.tmp
-    rm -fr $ROOT_DIR/src/configSchema/$TYPE.ts
+    rm -fr $ROOT_DIR/src/configSchema/$TYPE.
     mv $ROOT_DIR/src/configSchema/$TYPE.ts.tmp $ROOT_DIR/src/configSchema/$TYPE.ts
 done
 

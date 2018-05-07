@@ -17,8 +17,14 @@
     "newLine": "LF",
     "pretty": true,
     "lib": ["es2017"],
+    "rootDir": ".",
+    "sourceRoot": ".",
     "outDir": "out",
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "type-stubs"
+    ]
   },
   "exclude": [
     "node_modules",

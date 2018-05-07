@@ -5,43 +5,52 @@ import { ResultsObject, runCLI } from 'jest';
 import * as path from 'path';
 import * as sourceMapSupport from 'source-map-support';
 
-const testDirectory = path.resolve(__dirname, '../../test');
-const fromConfigDir = (filename: string) => path.resolve(__dirname, filename);
+const rootDir = path.resolve(__dirname, '../../');
+const fromRoot = (...subPaths: string[]): string => path.resolve(rootDir, ...subPaths);
+const srcRoot = fromRoot('src');
 
 const jestConfig = {
-  // rootDir: srcRootD
-  // transform: JSON.stringify({ "^.+\\.ts$": "ts-jest" }),
-  runInBand: true, // Required due to the way the "vscode" module is injected.
-  // testRegex: "\\.spec\\.ts$",
-  // testEnvironment: fromConfigDir("jest-vscode-environment.js"),
-  // setupTestFrameworkScriptFile: fromConfigDir("jest-vscode-framework-setup.js"),
-  // moduleFileExtensions: ["ts", "js", "json"],
-  // globals: JSON.stringify({ "ts-jest": { tsConfigFile: "../tsconfig.json" } }),
+    rootDir: rootDir,
+    roots: [ '<rootDir>/src' ],
+    verbose: true,
+    colors: true,
+    transform: JSON.stringify({ '^.+\\.ts$': 'ts-jest' }),
+    runInBand: true, // Required due to the way the "vscode" module is injected.
+    testRegex: '\\.(test|spec)\\.ts$',
+    testEnvironment: fromRoot('out/test/jest-vscode-environment.js'),
+    setupTestFrameworkScriptFile: fromRoot('out/test/jest-vscode-framework-setup.js'),
+    moduleFileExtensions: [ 'ts', 'tsx', 'js', 'jsx', 'json', 'node' ],
+    globals: JSON.stringify({
+        'ts-jest': {
+            skipBabel: true,
+            tsConfigFile: fromRoot('tsconfig.json')
+        }
+    })
 };
 
 export async function run(_testRoot: string, callback: TestRunnerCallback) {
-  // Enable source map support. This is done in the original Mocha test runner,
-  // so do it here. It is not clear if this is having any effect.
-  sourceMapSupport.install();
+    // Enable source map support. This is done in the original Mocha test runner,
+    // so do it here. It is not clear if this is having any effect.
+    sourceMapSupport.install();
 
-  // Forward logging from Jest to the Debug Console.
-  forwardStdoutStderrStreams();
+    // Forward logging from Jest to the Debug Console.
+    forwardStdoutStderrStreams();
 
-  try {
-    const { globalConfig, results } = await runCLI(jestConfig, [testDirectory]);
-    const failures = collectTestFailureMessages(results);
+    try {
+        const { globalConfig, results } = await (runCLI as any)(jestConfig, [rootDir]);
+        const failures = collectTestFailureMessages(results);
 
-    if (failures.length > 0) {
-      console.log('globalConfig:', globalConfig); // tslint:disable-line:no-console
-      // console.error(JSON.stringify(failures));
-      callback(null, failures);
-      return;
+        if (failures.length > 0) {
+            console.log('globalConfig:', globalConfig); // tslint:disable-line:no-console
+            console.log(JSON.stringify(failures));
+            callback(null, failures);
+            return;
+        }
+
+        callback(null);
+    } catch (e) {
+        callback(e);
     }
-
-    callback(null);
-  } catch (e) {
-    callback(e);
-  }
 }
 
 /**
@@ -50,12 +59,12 @@ export async function run(_testRoot: string, callback: TestRunnerCallback) {
  * @param results Jest test results.
  */
 function collectTestFailureMessages(results: ResultsObject): string[] {
-  const failures = results.testResults.reduce<string[]>((acc, testResult) => {
-    if (testResult.failureMessage) acc.push(testResult.failureMessage);
-    return acc;
-  }, []);
+    const failures = results.testResults.reduce<string[]>((acc, testResult) => {
+        if (testResult.failureMessage) acc.push(testResult.failureMessage);
+        return acc;
+    }, []);
 
-  return failures;
+    return failures;
 }
 
 /**
@@ -65,13 +74,13 @@ function collectTestFailureMessages(results: ResultsObject): string[] {
  * to the Debug Console.
  */
 function forwardStdoutStderrStreams() {
-  const logger = (line: string) => {
-    console.log(line); // tslint:disable-line:no-console
-    return true;
-  };
+    const logger = (line: string) => {
+      console.log(line); // tslint:disable-line:no-console
+      return true;
+    };
 
-  process.stdout.write = logger;
-  process.stderr.write = logger;
+    process.stdout.write = logger;
+    process.stderr.write = logger;
 }
 
 export type TestRunnerCallback = (error: Error | null, failures?: any) => void;

@@ -1,6 +1,8 @@
 import { GlobResolverConfig } from './config';
 import { validateGlobResolver } from '../../configSchema/validator';
 
+console.log('foo');
+
 describe('GlobResolverConfig', () => {
     it('allows a lone GlobResolver with a SingleGlob for a GlobInput', () => {
         const parsed: GlobResolverConfig = {

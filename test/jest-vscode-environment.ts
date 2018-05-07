@@ -5,8 +5,9 @@
  *
  * @see https://github.com/Unibeautify/vscode/blob/61897cd6cd0567db2c8688c3c0b835f9b5c5b446/test/jest-vscode-environment.ts
  */
-import * as NodeEnvironment from 'jest-environment-node';
+
 import * as vscode from 'vscode';
+import * as NodeEnvironment from 'jest-environment-node';
 
 class VsCodeEnvironment extends NodeEnvironment {
     constructor(config: any) {
@@ -22,6 +23,10 @@ class VsCodeEnvironment extends NodeEnvironment {
         this.global.vscode = {};
         return await super.teardown();
     }
+
+    public runScript(script: any) {
+        return super.runScript(script);
+      }
 }
 
 module.exports = VsCodeEnvironment;
