@@ -41,8 +41,6 @@ export async function run(_testRoot: string, callback: TestRunnerCallback) {
         const failures = collectTestFailureMessages(results);
 
         if (failures.length > 0) {
-            console.log('globalConfig:', globalConfig); // tslint:disable-line:no-console
-            console.log(JSON.stringify(failures));
             callback(null, failures);
             return;
         }

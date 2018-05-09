@@ -9,7 +9,6 @@
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
-            "outputCapture": "std",
             "stopOnEntry": false,
             "sourceMaps": true,
             "smartStep": true,
@@ -31,11 +30,9 @@
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/out/test/jest-test-runner"
             ],
-            "autoAttachChildProcesses": true,
             "stopOnEntry": false,
             "sourceMaps": true,
             "smartStep": true,
-            "internalConsoleOptions": "neverOpen",
             "skipFiles": [
                 "<node_internals>/**/*.js"
             ],
