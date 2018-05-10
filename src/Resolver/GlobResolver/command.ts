@@ -1,9 +1,10 @@
 import * as mm from 'micromatch';
 
 import { workspace, Uri } from 'vscode';
-import { getActiveFileUri } from '../../fsTools';
+import { getActiveFileUri } from '../../compat';
 import { getGlobResolverConfig } from './config';
-import { GlobResolver, ExplicitGlobResolver } from './schema';
+import { GlobResolver, ExplicitGlobResolver, SubbedExplicitGlobResolver } from './schema';
+import { substitute } from '../../substitution';
 
 
 export default async (): Promise<string> => {
@@ -17,9 +18,11 @@ export default async (): Promise<string> => {
     return '';
 };
 
+async function substituteInput(resource: Uri, resolver: ExplicitGlobResolver): Promise<SubbedExplicitGlobResolver | null> {
+    const subbed = await substitute(resolver.input);
+    return { ...resolver, subbedInput: subbed };
+}
 
-export function matchGlob(resource: Uri, resolvers: GlobResolver[]): ExplicitGlobResolver[] {
-    const results: ExplicitGlobResolver[] = [];
-
-    return [];
+export function inputMatches(resource: Uri, resolver: ExplicitGlobResolver): boolean {
+    
 }

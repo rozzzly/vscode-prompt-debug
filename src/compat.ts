@@ -2,11 +2,14 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as JSON6 from 'json-6';
 
-import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext } from 'vscode';
+import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext, TextEditor } from 'vscode';
 import { LooseUri, isDescendent, toUri, dirExists, fileExists, readFile } from './fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from './constants';
 import { isEqual } from 'lodash';
 import { isArray } from 'util';
+import { window } from 'vscode';
+import { Selection } from 'vscode';
+import { TextEdit } from 'vscode';
 
 export const isCaseInsensitive = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
@@ -97,6 +100,30 @@ export function getWorkspaceFolderUri(resource?: Uri): Uri | null {
 export function getWorkspaceFolderPath(resource?: Uri): string | null {
     const ws = getWorkspaceFolder(resource);
     return (ws) ? ws.uri.fsPath : null;
+}
+
+export function getOpenFiles(onlyVisible: boolean = false): Uri[] {
+    if (onlyVisible) {
+        return window.visibleTextEditors.map(editor => editor.document.uri);
+    } else {
+        return workspace.textDocuments.map(doc => doc.uri);
+    }
+}
+
+export function getSelections(activeEditorOnly: boolean = false): Selection[] {
+    if (activeEditorOnly) {
+        const activeEditor = getActiveEditor();
+        if (activeEditor) {
+            return activeEditor.selections;
+        } else {
+            return [];
+        }
+    } else {
+        return window.visibleTextEditors.reduce((reduction, editor) => [
+            ...reduction,
+            ...editor.selections
+        ], []);
+    }
 }
 
 export type ConfigScope = (
@@ -202,5 +229,28 @@ export async function getUserConfig(suppressErrors: boolean = true): Promise<obj
         } else {
             throw new Error('user config has not been located');
         }
+    }
+}
+
+export function getActiveFilePath(): string | null {
+    if (window.activeTextEditor) {
+        return window.activeTextEditor.document.uri.fsPath;
+    } else {
+        return null;
+    }
+}
+export function getActiveFileUri(): Uri | null {
+    if (window.activeTextEditor) {
+        return window.activeTextEditor.document.uri;
+    } else {
+        return null;
+    }
+}
+
+export function getActiveEditor(): TextEditor | null {
+    if (window.activeTextEditor) {
+        return window.activeTextEditor;
+    } else {
+        return null;
     }
 }

@@ -2,13 +2,14 @@ import { mergeWith, uniq, isPlainObject, intersection, difference } from 'lodash
 import { Substitution, defaultSubstitutions } from '../../substitution';
 import { ExecSyncOptionsWithBufferEncoding } from 'child_process';
 import { inherits, isArray } from 'util';
-import { getActiveFileUri } from '../../fsTools';
 import { getConfig } from '../../compat';
 import { Uri } from 'vscode';
 import { COMMAND_IDs, CONFIG_IDs } from '../../constants';
 
-export type INHERITS_KEYWORD = '$-INHERIT-$ ';
-export const INHERITS_KEYWORD: INHERITS_KEYWORD = '$-INHERIT-$ ';
+export type UNDEFINED_KEYWORD = '@@[UNDEFINED]';
+export const UNDEFINED_KEYWORD: UNDEFINED_KEYWORD = '@@[UNDEFINED]';
+export type INHERITS_KEYWORD = '@@[INHERIT]';
+export const INHERITS_KEYWORD: INHERITS_KEYWORD = '@@[INHERIT]';
 
 export interface GlobOptions {
     /**
@@ -82,6 +83,10 @@ export interface ExplicitGlobResolver extends GlobResolver {
     input: SingleGlob;
     options: GlobOptions;
     output: string;
+}
+
+export interface SubbedExplicitGlobResolver extends ExplicitGlobResolver {
+    subbedInput: SingleGlob;
 }
 
 export type GlobResolverConfig = (

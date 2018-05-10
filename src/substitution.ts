@@ -1,7 +1,16 @@
 import * as path from 'path';
-import { workspace, commands, Uri,  } from 'vscode';
-import { getActiveFilePath, getActiveFileUri, relativePath, homeDirUri } from './fsTools';
-import { isMultiRootSupported, isWorkspaceOpen, getWorkspaceFolder, getWorkspaceFolderByName, PotentiallyFauxWorkspaceFolder } from './compat';
+import { workspace, commands, Uri } from 'vscode';
+import { relativePath, homeDirUri } from './fsTools';
+import {
+    isWorkspaceOpen,
+    getActiveFileUri,
+    getActiveFilePath,
+    getWorkspaceFolder,
+    isMultiRootSupported,
+    getWorkspaceFolderByName,
+    PotentiallyFauxWorkspaceFolder,
+    getOpenFiles
+} from './compat';
 
 const userHome: RegExp = /^~/;
 const subEscapeSplitter: RegExp = /(\$\{\s*\S+?[\S\s]*?\s*\})/g;
@@ -10,6 +19,8 @@ const subEscapeExtractor: RegExp = /\$\{\s*(\S+?[\S\s]*?)\s*\}/g;
 export interface SubstitutionContext<D extends {} = {}> {
     data: D;
     activeFile: Uri | null;
+    openFiles: Uri[];
+    visibleFiles: Uri[];
     workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
 }
 
@@ -54,6 +65,7 @@ export const defaultSubstitutions: Substitution[] = [
             }
         }
     },
+    /// TODO ::: ADD visibleFiles and openFiles
     {
         pattern: /relativeFile/,
         async resolver(ctx): Promise<string> {
@@ -71,7 +83,7 @@ export const defaultSubstitutions: Substitution[] = [
         }
     },
     {
-        pattern: /rootPath|workspaceFolder(?:\:([^\.]+)\:)?Basename/,
+        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?Basename/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
                 const ws = ((workspaceName)
@@ -89,7 +101,7 @@ export const defaultSubstitutions: Substitution[] = [
         }
     },
     {
-        pattern: /rootPath|workspaceFolder(?:\:([^\.]+))?/,
+        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+))?/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
                 const ws = ((workspaceName)
@@ -112,9 +124,13 @@ export const containsSubstitution = (str: string): boolean => (
     str.includes('${') && subEscapeSplitter.test(str)
 );
 
+export function createContext<D extends {} = {}>(): SubstitutionContext<D>;
+export function createContext<D extends {} = {}>(data: D): SubstitutionContext<D>;
 export function createContext<D extends {} = {}>(data: D = {} as D): SubstitutionContext<D> {
-    const ctx = { data } as SubstitutionContext<D>;
+    const ctx = { ...(data as any) };
     ctx.activeFile = getActiveFileUri();
+    ctx.openFiles = getOpenFiles();
+    ctx.visibleFiles = getOpenFiles(true);
     ctx.workspaceFolder = getWorkspaceFolder(ctx.activeFile);
     return ctx;
 }

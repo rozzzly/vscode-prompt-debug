@@ -11,21 +11,6 @@ import { isMultiRootSupported, isCaseInsensitive } from './compat';
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
 
-export function getActiveFilePath(): string | null {
-    if (vsWindow.activeTextEditor) {
-        return vsWindow.activeTextEditor.document.uri.fsPath;
-    } else {
-        return null;
-    }
-}
-export function getActiveFileUri(): Uri | null {
-    if (vsWindow.activeTextEditor) {
-        return vsWindow.activeTextEditor.document.uri;
-    } else {
-        return null;
-    }
-}
-
 export type LooseUri = string | Uri;
 
 export async function toUri(value: LooseUri): Promise<Uri> {

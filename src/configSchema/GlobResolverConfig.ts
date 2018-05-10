@@ -6,7 +6,7 @@ export default {
             additionalProperties: false,
             properties: {
                 options: {
-                    $ref: '#/definitions/GlobOptions'
+                    $ref: '#/definitions/PartialGlobOptions'
                 },
                 pattern: {
                     anyOf: [
@@ -45,8 +45,44 @@ export default {
                 }
             ]
         },
-        GlobOptions: {
+        GlobResolver: {
             additionalProperties: false,
+            properties: {
+                input: {
+                    $ref: '#/definitions/GlobInput'
+                },
+                options: {
+                    $ref: '#/definitions/PartialGlobOptions'
+                },
+                output: {
+                    type: 'string'
+                }
+            },
+            required: ['input', 'output'],
+            type: 'object'
+        },
+        GlobResolverConfig: {
+            anyOf: [
+                {
+                    $ref: '#/definitions/GlobResolver'
+                },
+                {
+                    items: {
+                        $ref: '#/definitions/GlobResolver'
+                    },
+                    type: 'array'
+                }
+            ]
+        },
+        MultiGlob: {
+            items: {
+                $ref: '#/definitions/SingleGlob'
+            },
+            type: 'array'
+        },
+        PartialGlobOptions: {
+            additionalProperties: false,
+            description: 'Make all properties in T optional',
             properties: {
                 basename: {
                     default: false,
@@ -74,60 +110,31 @@ export default {
                     ]
                 },
                 nobrace: {
+                    default: false,
                     type: 'boolean'
                 },
                 nocase: {
+                    default: false,
                     type: 'boolean'
                 },
                 noext: {
+                    default: false,
                     type: 'boolean'
                 },
                 noglobstar: {
+                    default: false,
                     type: 'boolean'
                 },
                 nonegate: {
+                    default: false,
                     type: 'boolean'
                 },
                 unescape: {
+                    default: false,
                     type: 'boolean'
                 }
             },
             type: 'object'
-        },
-        GlobResolver: {
-            additionalProperties: false,
-            properties: {
-                input: {
-                    $ref: '#/definitions/GlobInput'
-                },
-                options: {
-                    $ref: '#/definitions/GlobOptions'
-                },
-                output: {
-                    type: 'string'
-                }
-            },
-            required: ['input', 'output'],
-            type: 'object'
-        },
-        GlobResolverConfig: {
-            anyOf: [
-                {
-                    $ref: '#/definitions/GlobResolver'
-                },
-                {
-                    items: {
-                        $ref: '#/definitions/GlobResolver'
-                    },
-                    type: 'array'
-                }
-            ]
-        },
-        MultiGlob: {
-            items: {
-                $ref: '#/definitions/SingleGlob'
-            },
-            type: 'array'
         },
         SingleGlob: {
             type: 'string'

@@ -1,9 +1,9 @@
 import { Uri } from 'vscode';
-import { mergeWith, isPlainObject, uniq } from 'lodash';
+import { mergeWith, tap, isPlainObject, uniq } from 'lodash';
 
 import { getConfig } from '../../compat';
 import { CONFIG_IDs } from '../../constants';
-import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, ExplicitGlobResolver, GlobResolver, PartialGlobOptions } from './schema';
+import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, ExplicitGlobResolver, GlobResolver, PartialGlobOptions, UNDEFINED_KEYWORD } from './schema';
 
 export const defaultOptions: GlobOptions = {
     basename: false,
@@ -18,11 +18,11 @@ export const defaultOptions: GlobOptions = {
     unescape: false
 };
 
-export const mergeOptions = (...opts: (PartialGlobOptions | undefined)[]): GlobOptions => mergeWith(
+export const mergeOptions = (...opts: (PartialGlobOptions | undefined)[]): GlobOptions => tap(mergeWith(
     {},
     defaultOptions,
     ...(opts.filter(parent => parent !== undefined)),
-    (objVal: any, srcVal: any, key: any): any => {
+    (objVal: PartialGlobOptions, srcVal: GlobOptions, key: keyof GlobOptions): any => {
         if (key === 'ignore') {
             if (Array.isArray(objVal)) {
                 if (Array.isArray(srcVal) && srcVal.length >= 1) {
@@ -55,7 +55,12 @@ export const mergeOptions = (...opts: (PartialGlobOptions | undefined)[]): GlobO
             } else return srcVal;
         }
     }
-);
+), (v: GlobOptions) => {
+    if (v && v.ignore && v.ignore === UNDEFINED_KEYWORD) {
+        v.ignore = undefined;
+    }
+    return v;
+});
 
 export function normalizeResolverConfig(raw: GlobResolverConfig): ExplicitGlobResolver[];
 export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors: true): ExplicitGlobResolver[] | null;
@@ -202,7 +207,12 @@ export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors:
     }
 }
 
-export function getGlobResolverConfig(resource?: Uri): GlobResolverConfig | null {
+export function getGlobResolverConfig(resource?: Uri): ExplicitGlobResolver[] | null {
     const cfg = getConfig(resource);
-    return cfg.get(CONFIG_IDs.globResolver, null);
+    const resolverCfg = cfg.get<GlobResolverConfig | null>(CONFIG_IDs.globResolver, null);
+    if (resolverCfg) {
+        return normalizeResolverConfig(resolverCfg);
+    } else {
+        return null;
+    }
 }
