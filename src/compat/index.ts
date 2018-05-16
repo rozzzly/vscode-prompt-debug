@@ -180,7 +180,6 @@ export function objLookup<T>(config: object, key: string, defaultValue: T | conf
     let parts: string[] = [...allParts];
     let unusedParts: string[] = [];
     let selectedKeys: string[] = [];
-    let found: boolean = false;
     while (true) {
         const keys = Object.keys(node);
         const joined = parts.join('.');

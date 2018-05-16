@@ -1,10 +1,5 @@
-import * as mm from 'micromatch';
-import { workspace, Uri } from 'vscode';
-
-import { getActiveFileUri } from '../../compat/index';
+import { getActiveFileUri } from '../../compat';
 import { getGlobResolverConfig } from './config';
-import { substitute, SubstitutionContext } from '../../substitution';
-import { GlobResolver, ExplicitGlobResolver, SingleGlob } from './schema';
 import { showWarning, showInfo, showError } from '../../compat/message';
 
 
