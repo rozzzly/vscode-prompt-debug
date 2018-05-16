@@ -9,7 +9,8 @@ import {
     isMultiRootSupported,
     getWorkspaceFolderByName,
     PotentiallyFauxWorkspaceFolder,
-    getOpenFiles
+    getOpenFiles,
+    getWorkspaceFolderUri
 } from './compat';
 
 const userHome: RegExp = /^~/;
@@ -21,7 +22,7 @@ export interface SubstitutionContext<D extends {} = {}> {
     activeFile: Uri | null;
     openFiles: Uri[];
     visibleFiles: Uri[];
-    workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
+    // workspaceFolder: PotentiallyFauxWorkspaceFolder | null;
 }
 
 export interface Substitution<D extends {} = {}> {
@@ -70,12 +71,26 @@ export const defaultSubstitutions: Substitution[] = [
         pattern: /relativeFile/,
         async resolver(ctx): Promise<string> {
             if (ctx.activeFile) {
-                if (ctx.workspaceFolder) {
-                    return relativePath(ctx.activeFile, ctx.workspaceFolder.uri);
-                } else if (isWorkspaceOpen()) {
-                    throw new TypeError('No open workspaces containing that resource.');
+                const wsUri = getWorkspaceFolderUri(ctx.activeFile);
+                if (wsUri) {
+                    return relativePath(ctx.activeFile, wsUri);
                 } else {
-                    throw new TypeError('No open workspaces.');
+                    throw new TypeError('No open workspaces containing that resource.');
+                }
+            } else {
+                throw new TypeError('No open file.');
+            }
+        }
+    },
+    {
+        pattern: /relativeFileBaseName/,
+        async resolver(ctx): Promise<string> {
+            if (ctx.activeFile) {
+                const wsUri = getWorkspaceFolderUri(ctx.activeFile);
+                if (wsUri) {
+                    return path.basename(relativePath(ctx.activeFile, wsUri));
+                } else {
+                    throw new TypeError('No open workspaces containing that resource.');
                 }
             } else {
                 throw new TypeError('No open file.');
@@ -86,10 +101,7 @@ export const defaultSubstitutions: Substitution[] = [
         pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?Basename/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
-                const ws = ((workspaceName)
-                    ? getWorkspaceFolderByName(workspaceName)
-                    : ctx.workspaceFolder
-                );
+                const ws = getWorkspaceFolderByName(workspaceName);
                 if (ws) {
                     return path.basename(ws.uri.fsPath);
                 } else {
@@ -104,10 +116,7 @@ export const defaultSubstitutions: Substitution[] = [
         pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+))?/,
         async resolver(ctx, workspaceName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
-                const ws = ((workspaceName)
-                    ? getWorkspaceFolderByName(workspaceName)
-                    : ctx.workspaceFolder
-                );
+                const ws = getWorkspaceFolderByName(workspaceName);
                 if (ws) {
                     return ws.uri.fsPath;
                 } else {
@@ -127,12 +136,12 @@ export const containsSubstitution = (str: string): boolean => (
 export function createContext<D extends {} = {}>(): SubstitutionContext<D>;
 export function createContext<D extends {} = {}>(data: D): SubstitutionContext<D>;
 export function createContext<D extends {} = {}>(data: D = {} as D): SubstitutionContext<D> {
-    const ctx = { ...(data as any) };
-    ctx.activeFile = getActiveFileUri();
-    ctx.openFiles = getOpenFiles();
-    ctx.visibleFiles = getOpenFiles(true);
-    ctx.workspaceFolder = getWorkspaceFolder(ctx.activeFile);
-    return ctx;
+    return {
+        openFiles: getOpenFiles(),
+        activeFile: getActiveFileUri(),
+        visibleFiles: getOpenFiles(true),
+        ...(data as any)
+    };
 }
 
 
@@ -142,13 +151,14 @@ export function createContext<D extends {} = {}>(data: D = {} as D): Substitutio
 
 export const substitute = (
     str: string,
-    subs: Substitution[] = defaultSubstitutions,
-    ctx: SubstitutionContext = createContext()
+    ctx: Partial<SubstitutionContext> = {},
+    subs: Substitution[] = defaultSubstitutions
 ): Promise<string> => (
     Promise.all((str)
         .replace(userHome, homeDirUri.fsPath)
         .split(subEscapeSplitter)
         .map(piece => new Promise<string>((resolve, reject) => {
+            const fullCTX = createContext(ctx);
             const outerMatch = subEscapeExtractor.exec(piece);
             if (outerMatch) {
                 const subExpression = outerMatch[1].trim();
@@ -163,10 +173,10 @@ export const substitute = (
                 });
                 if (handler) {
                     if (isSimple(handler)) {
-                        resolve(handler.resolver(ctx));
+                        resolve(handler.resolver(fullCTX));
                     } else {
                         const [_, ...parameters] = innerMatch!;
-                        resolve(handler.resolver(ctx, ...parameters));
+                        resolve(handler.resolver(fullCTX, ...parameters));
                     }
                 } else {
                     reject({

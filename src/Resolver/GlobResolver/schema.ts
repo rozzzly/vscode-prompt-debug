@@ -85,10 +85,6 @@ export interface ExplicitGlobResolver extends GlobResolver {
     output: string;
 }
 
-export interface SubbedExplicitGlobResolver extends ExplicitGlobResolver {
-    subbedInput: SingleGlob;
-}
-
 export type GlobResolverConfig = (
     | GlobResolver
     | GlobResolver[]

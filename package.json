@@ -61,9 +61,9 @@
         "test": "node ./node_modules/vscode/bin/test",
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
-    "main": "./out/extension",
+    "main": "./out/src/extension",
     "activationEvents": [
-        "onCommand:prompt-debug.resolve",
+        "onCommand:prompt-debug.resolveViaGlob",
         "onCommand:prompt-debug.prompt",
         "onCommand:prompt-debug.resetHistory",
         "onCommand:prompt-debug.autoResolve"
@@ -95,7 +95,7 @@
             },
             {
                 "title": "Resolve Targeted File for Debug Session",
-                "command": "prompt-debug.resolve"
+                "command": "prompt-debug.resolveViaGlob"
             }
         ]
     }

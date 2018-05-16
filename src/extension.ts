@@ -2,13 +2,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra-promise';
 import * as path from 'path';
 
-import { resolveToPath, getActiveFilePath } from './fsTools';
+import { resolveToPath } from './fsTools';
 import { COMMAND_CANONICAL_IDs } from './constants';
 import { workspace } from 'vscode';
-import { findUserConfig } from './compat';
+import { findUserConfig, getActiveFilePath } from './compat';
 import { DisposableHandle } from './runtime';
 
-
+import run from './runtime';
 
 const CHOICE_TIMEOUT: number = 333;
 const HISTORY_SIZE: number = 15;
@@ -137,7 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand(COMMAND_CANONICAL_IDs.clearHistory, () => {
         context.workspaceState.update('history', []);
     }));
-
+    run(context);
 }
 
 export function deactivate(context: vscode.ExtensionContext) {

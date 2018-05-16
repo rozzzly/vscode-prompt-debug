@@ -1,10 +1,11 @@
 import * as mm from 'micromatch';
-
 import { workspace, Uri } from 'vscode';
-import { getActiveFileUri } from '../../compat';
+
+import { getActiveFileUri } from '../../compat/index';
 import { getGlobResolverConfig } from './config';
-import { GlobResolver, ExplicitGlobResolver, SubbedExplicitGlobResolver } from './schema';
-import { substitute } from '../../substitution';
+import { substitute, SubstitutionContext } from '../../substitution';
+import { GlobResolver, ExplicitGlobResolver, SingleGlob } from './schema';
+import { showWarning, showInfo, showError } from '../../compat/message';
 
 
 export default async (): Promise<string> => {
@@ -12,17 +13,16 @@ export default async (): Promise<string> => {
     if (activeFile) {
         const cfg = getGlobResolverConfig(activeFile);
         console.log(cfg);
+        if (cfg) {
+            showInfo('config loaded');
+            return '';
+        } else {
+            showError('Could not load configuration. Please check documentation to sample configurations.');
+            return '';
+        }
     } else {
-        throw new URIError('No activeFile');
+        showWarning('No active editor');
+        return '';
     }
-    return '';
 };
 
-async function substituteInput(resource: Uri, resolver: ExplicitGlobResolver): Promise<SubbedExplicitGlobResolver | null> {
-    const subbed = await substitute(resolver.input);
-    return { ...resolver, subbedInput: subbed };
-}
-
-export function inputMatches(resource: Uri, resolver: ExplicitGlobResolver): boolean {
-    
-}

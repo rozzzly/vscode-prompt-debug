@@ -19,7 +19,7 @@ const globSubstitutions: Substitution<PatternContext>[] = [
         }
     },
     {
-        pattern: /glob\:count/,
+        pattern: /glob:count/,
         resolver(ctx): string {
             return String(ctx.data.glob.length);
         }
