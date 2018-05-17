@@ -1,5 +1,6 @@
 import * as mm from 'micromatch';
-import { ExplicitGlobResolver, SingleGlob } from './schema';
+import { SingleGlob } from './schema';
+import { ExplicitGlobResolver } from './config';
 
 import { SubstitutionContext, substitute } from '../../substitution';
 import { Uri } from 'vscode';
@@ -15,7 +16,13 @@ async function substituteInput(resolver: ExplicitGlobResolver, ctx: Partial<Subs
     return { ...resolver, subbedInput: subbed };
 }
 
-export async function allMatchingResolvers(resolvers: ExplicitGlobResolver[], resources: Uri[]): Promise<ResolvedResourceMap>  {
+export type MatchLimitBehavior = (
+    | 'all'
+    | 'one'
+    | 'onePerResource'
+);
+
+export async function allMatchingResolversMulti(resolvers: ExplicitGlobResolver[], resources: Uri[]): Promise<ResolvedResourceMap>  {
     const matching: ResolvedResourceMap = new Map();
     await Promise.all(resolvers.map(async (resolver) => {
         for (let i = 0; i < resources.length; i++) {
@@ -36,7 +43,7 @@ export async function allMatchingResolvers(resolvers: ExplicitGlobResolver[], re
 }
 
 export async function firstMatchingResolver(resolvers: ExplicitGlobResolver[], resource: Uri): Promise<SubbedExplicitGlobResolver | null> {
-    const result = await allMatchingResolvers(resolvers, [resource]);
+    const result = await allMatchingResolversMulti(resolvers, [resource]);
     const { fsPath } = resource;
     if (result.has(fsPath)) {
         return (result.get(fsPath) as SubbedExplicitGlobResolver[])[0];

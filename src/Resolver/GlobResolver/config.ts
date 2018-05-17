@@ -3,7 +3,14 @@ import { mergeWith, tap, isPlainObject, uniq } from 'lodash';
 
 import { getConfig } from '../../compat';
 import { CONFIG_IDs } from '../../constants';
-import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, ExplicitGlobResolver, GlobResolver, PartialGlobOptions, UNDEFINED_KEYWORD } from './schema';
+import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, GlobResolver, PartialGlobOptions, UNDEFINED_KEYWORD, SingleGlob } from './schema';
+
+export interface ExplicitGlobResolver extends GlobResolver {
+    input: SingleGlob;
+    options: GlobOptions;
+    output: string;
+}
+
 
 export const defaultOptions: GlobOptions = {
     basename: false,

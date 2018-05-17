@@ -79,12 +79,6 @@ export interface GlobResolver {
     output: string;
 }
 
-export interface ExplicitGlobResolver extends GlobResolver {
-    input: SingleGlob;
-    options: GlobOptions;
-    output: string;
-}
-
 export type GlobResolverConfig = (
     | GlobResolver
     | GlobResolver[]
