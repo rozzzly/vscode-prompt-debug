@@ -134,13 +134,18 @@ export const containsSubstitution = (str: string): boolean => (
 );
 
 export function createContext<D extends {} = {}>(): SubstitutionContext<D>;
-export function createContext<D extends {} = {}>(data: D): SubstitutionContext<D>;
-export function createContext<D extends {} = {}>(data: D = {} as D): SubstitutionContext<D> {
+export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O): SubstitutionContext<D>;
+export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O = {}): SubstitutionContext<D> {
+    const { data, ...extra } = overrides as any;
     return {
         openFiles: getOpenFiles(),
         activeFile: getActiveFileUri(),
         visibleFiles: getOpenFiles(true),
-        ...(data as any)
+        ...extra,
+        data: ((data)
+            ? data
+            : {}
+        )
     };
 }
 
