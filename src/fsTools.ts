@@ -10,8 +10,24 @@ import { isMultiRootSupported, isCaseInsensitive } from './compat';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
-
 export type LooseUri = string | Uri;
+
+export function dropExt(resource: LooseUri, ext?: string): string;
+export function dropExt(_resource: LooseUri, _ext?: string): string {
+    const resource = ((typeof _resource === 'string')
+        ? _resource
+        : _resource.fsPath
+    );
+    const ext = ((_ext === undefined)
+        ? path.extname(resource)
+        : _ext
+    );
+    if (resource.endsWith(ext)) {
+        return resource.slice(0, -1 * ext.length);
+    } else {
+        return resource;
+    }
+}
 
 export async function toUri(value: LooseUri): Promise<Uri> {
     if (typeof value === 'string') {

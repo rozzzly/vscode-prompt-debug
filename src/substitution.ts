@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { workspace, commands, Uri } from 'vscode';
-import { relativePath, homeDirUri } from './fsTools';
+import { relativePath, homeDirUri, dropExt } from './fsTools';
 import {
     isWorkspaceOpen,
     getActiveFileUri,
@@ -46,7 +46,7 @@ export const isParameterized = (value: any): value is ParameterizedSubstitution 
 
 export const defaultSubstitutions: Substitution[] = [
     {
-        pattern: /command\:([\s\S]+)/,
+        pattern: /command\:(\S[\s\S]+)/,
         async resolver(ctx, command): Promise<string> {
             const cmds = await commands.getCommands();
             if (cmds.includes(command)) {
@@ -57,10 +57,22 @@ export const defaultSubstitutions: Substitution[] = [
         }
     },
     {
-        pattern: 'file',
-        resolver(ctx): string {
+        pattern: 'file(BaseName)?(NoExt)?',
+        resolver(ctx, baseName: string | undefined, noExt: string | undefined): string {
             if (ctx.activeFile) {
-                return ctx.activeFile.fsPath;
+                if (baseName) {
+                    if (noExt) {
+                        return path.basename(ctx.activeFile.fsPath);
+                    } else {
+                        return path.basename(dropExt(ctx.activeFile.fsPath));
+                    }
+                } else {
+                    if (noExt) {
+                        return dropExt(ctx.activeFile.fsPath);
+                    } else {
+                        return ctx.activeFile.fsPath;
+                    }
+                }
             } else {
                 throw new TypeError('No open file.');
             }
@@ -68,12 +80,25 @@ export const defaultSubstitutions: Substitution[] = [
     },
     /// TODO ::: ADD visibleFiles and openFiles
     {
-        pattern: /relativeFile/,
-        async resolver(ctx): Promise<string> {
+        pattern: /relativeFile(BaseName)?(NoExt)?/,
+        async resolver(ctx, baseName: string | undefined, noExt: string | undefined): Promise<string> {
             if (ctx.activeFile) {
                 const wsUri = getWorkspaceFolderUri(ctx.activeFile);
                 if (wsUri) {
-                    return relativePath(ctx.activeFile, wsUri);
+                    const relative = relativePath(ctx.activeFile, wsUri);
+                    if (baseName) {
+                        if (noExt) {
+                            return path.basename(relative);
+                        } else {
+                            return path.basename(dropExt(relative));
+                        }
+                    } else {
+                        if (noExt) {
+                            return dropExt(relative);
+                        } else {
+                            return relative;
+                        }
+                    }
                 } else {
                     throw new TypeError('No open workspaces containing that resource.');
                 }
@@ -83,42 +108,15 @@ export const defaultSubstitutions: Substitution[] = [
         }
     },
     {
-        pattern: /relativeFileBaseName/,
-        async resolver(ctx): Promise<string> {
-            if (ctx.activeFile) {
-                const wsUri = getWorkspaceFolderUri(ctx.activeFile);
-                if (wsUri) {
-                    return path.basename(relativePath(ctx.activeFile, wsUri));
-                } else {
-                    throw new TypeError('No open workspaces containing that resource.');
-                }
-            } else {
-                throw new TypeError('No open file.');
-            }
-        }
-    },
-    {
-        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?Basename/,
-        async resolver(ctx, workspaceName: string | undefined): Promise<string> {
+        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?(BaseName)?/,
+        async resolver(ctx, workspaceName: string | undefined, baseName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
                 const ws = getWorkspaceFolderByName(workspaceName);
                 if (ws) {
-                    return path.basename(ws.uri.fsPath);
-                } else {
-                    throw new TypeError('Could not find workspace for that resource!');
-                }
-             } else {
-                throw new TypeError('No open workspaces.');
-            }
-        }
-    },
-    {
-        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+))?/,
-        async resolver(ctx, workspaceName: string | undefined): Promise<string> {
-            if (isWorkspaceOpen()) {
-                const ws = getWorkspaceFolderByName(workspaceName);
-                if (ws) {
-                    return ws.uri.fsPath;
+                    return ((baseName)
+                        ? path.basename(ws.uri.fsPath)
+                        : ws.uri.fsPath
+                    );
                 } else {
                     throw new TypeError('Could not find workspace for that resource!');
                 }
@@ -135,7 +133,7 @@ export const containsSubstitution = (str: string): boolean => (
 
 export function createContext<D extends {} = {}>(): SubstitutionContext<D>;
 export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O): SubstitutionContext<D>;
-export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O = {}): SubstitutionContext<D> {
+export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O = {} as any): SubstitutionContext<D> {
     const { data, ...extra } = overrides as any;
     return {
         openFiles: getOpenFiles(),
