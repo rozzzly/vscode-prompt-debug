@@ -11,7 +11,7 @@ import {
     PotentiallyFauxWorkspaceFolder,
     getOpenFiles,
     getWorkspaceFolderUri
-} from './compat';
+} from '../compat';
 
 const userHome: RegExp = /^~/;
 const subEscapeSplitter: RegExp = /(\$\{\s*\S+?[\S\s]*?\s*\})/g;
@@ -44,107 +44,64 @@ export interface ParameterizedSubstitution<D extends {} = D> extends Substitutio
 export const isSimple = (value: any): value is SimpleSubstitution => typeof value.pattern === 'string';
 export const isParameterized = (value: any): value is ParameterizedSubstitution => value.pattern instanceof RegExp;
 
-export const defaultSubstitutions: Substitution[] = [
-    {
-        pattern: /command\:(\S[\s\S]+)/,
-        async resolver(ctx, command): Promise<string> {
-            const cmds = await commands.getCommands();
-            if (cmds.includes(command)) {
-                return commands.executeCommand<string>(command).then(out => out || '');
-            } else {
-                throw new TypeError('unregistered command.');
-            }
-        }
-    },
-    {
-        pattern: 'file(BaseName)?(NoExt)?',
-        resolver(ctx, baseName: string | undefined, noExt: string | undefined): string {
-            if (ctx.activeFile) {
-                if (baseName) {
-                    if (noExt) {
-                        return path.basename(ctx.activeFile.fsPath);
-                    } else {
-                        return path.basename(dropExt(ctx.activeFile.fsPath));
-                    }
-                } else {
-                    if (noExt) {
-                        return dropExt(ctx.activeFile.fsPath);
-                    } else {
-                        return ctx.activeFile.fsPath;
-                    }
-                }
-            } else {
-                throw new TypeError('No open file.');
-            }
-        }
-    },
-    /// TODO ::: ADD visibleFiles and openFiles
-    {
-        pattern: /relativeFile(BaseName)?(NoExt)?/,
-        async resolver(ctx, baseName: string | undefined, noExt: string | undefined): Promise<string> {
-            if (ctx.activeFile) {
-                const wsUri = getWorkspaceFolderUri(ctx.activeFile);
-                if (wsUri) {
-                    const relative = relativePath(ctx.activeFile, wsUri);
-                    if (baseName) {
-                        if (noExt) {
-                            return path.basename(relative);
-                        } else {
-                            return path.basename(dropExt(relative));
-                        }
-                    } else {
-                        if (noExt) {
-                            return dropExt(relative);
-                        } else {
-                            return relative;
-                        }
-                    }
-                } else {
-                    throw new TypeError('No open workspaces containing that resource.');
-                }
-            } else {
-                throw new TypeError('No open file.');
-            }
-        }
-    },
-    {
-        pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?(BaseName)?/,
-        async resolver(ctx, workspaceName: string | undefined, baseName: string | undefined): Promise<string> {
-            if (isWorkspaceOpen()) {
-                const ws = getWorkspaceFolderByName(workspaceName);
-                if (ws) {
-                    return ((baseName)
-                        ? path.basename(ws.uri.fsPath)
-                        : ws.uri.fsPath
-                    );
-                } else {
-                    throw new TypeError('Could not find workspace for that resource!');
-                }
-            } else {
-                throw new TypeError('No open workspaces.');
-            }
-        }
-    }
-];
-
 export const containsSubstitution = (str: string): boolean => (
     str.includes('${') && subEscapeSplitter.test(str)
 );
 
+export type ExtractDataFromContext<C extends SubstitutionContext<any>> = (
+    (C extends SubstitutionContext<infer D>
+        ? D
+        : never
+    )
+);
+
+export type PartialContext<C extends SubstitutionContext> = {
+    [K in Exclude<keyof C, 'data'>]?: C[K];
+} & {
+    data?: Partial<C['data']>
+};
+type derp = SubstitutionContext<{ foo: 'bar' }>;
+
+
+export interface ContextChain<B extends SubstitutionContext> {
+    // merge<D extends {} = {}, O extends SubstitutionContext<D> = SubstitutionContext<D>>(overrides: Partial<O>): SubstitutionContext<C & O>;
+    merge<O extends SubstitutionContext>(overrides: PartialContext<O>): ContextChain<B & O>;
+    extract(): B;
+}
+
+
+const createMergeContext = <O extends SubstitutionContext>(...overrides: (PartialContext<O>)[]): ContextChain<O>  => ({
+    merge: (override) => createMergeContext(...override as any, override) as any,
+    extract: () => overrides.reduce((reduction, override) => {
+        const { data = {}, ...extra } = override as any;
+        return {
+            ...reduction as any,
+            ...extra,
+            data: {
+                ...(reduction.data || {}) as any,
+                ...data
+            }
+        };
+    }, {})
+});
+const foo = createMergeContext({ });
+const foo2 = foo.merge({ herpDerp:false });
+
 export function createContext<D extends {} = {}>(): SubstitutionContext<D>;
 export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O): SubstitutionContext<D>;
 export function createContext<D extends {} = {}, O extends Partial<SubstitutionContext<D>> = {}>(overrides: O = {} as any): SubstitutionContext<D> {
-    const { data, ...extra } = overrides as any;
-    return {
+    let base = {
         openFiles: getOpenFiles(),
         activeFile: getActiveFileUri(),
         visibleFiles: getOpenFiles(true),
-        ...extra,
-        data: ((data)
-            ? data
-            : {}
-        )
     };
+    
+    //     ...extra,
+    //     data: ((data)
+    //         ? data
+    //         : {}
+    //     )
+    // };
 }
 
 

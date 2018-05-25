@@ -14,10 +14,7 @@ export type LooseUri = string | Uri;
 
 export function dropExt(resource: LooseUri, ext?: string): string;
 export function dropExt(_resource: LooseUri, _ext?: string): string {
-    const resource = ((typeof _resource === 'string')
-        ? _resource
-        : _resource.fsPath
-    );
+    const resource = asPath(_resource);
     const ext = ((_ext === undefined)
         ? path.extname(resource)
         : _ext
@@ -29,7 +26,7 @@ export function dropExt(_resource: LooseUri, _ext?: string): string {
     }
 }
 
-export async function toUri(value: LooseUri): Promise<Uri> {
+export async function resolveUri(value: LooseUri): Promise<Uri> {
     if (typeof value === 'string') {
         if (containsSubstitution(value)) {
             const subbed = await substitute(value);
@@ -50,34 +47,27 @@ export async function toUri(value: LooseUri): Promise<Uri> {
     }
 }
 
-export async function toPath(value: LooseUri): Promise<string> {
-    if (typeof value === 'string') {
-        if (containsSubstitution(value)) {
-            const subbed = await substitute(value);
-            if (path.isAbsolute(subbed)) {
-                return subbed;
-            } else {
-                throw new URIError('path MUST be absolute');
-            }
-        } else {
-            if (path.isAbsolute(value)) {
-                return value;
-            } else {
-                throw new URIError('path MUST be absolute');
-            }
-        }
-    } else {
-        return value.fsPath;
-    }
+export async function resolvePath(resource: LooseUri): Promise<string> {
+    return (await resolveUri(resource)).fsPath;
 }
 
+export const asPath = (resource: LooseUri): string => (
+    ((typeof resource === 'string')
+        ? resource
+        : resource.fsPath
+    )
+);
 
-export const relativePath = (resource: Uri, base: Uri): string => (
-    path.relative(resource.fsPath, base.fsPath)
+export const basename = (resource: LooseUri, ext?: string): string => (
+    path.basename(asPath(resource), ext)
+);
+
+export const relativePath = (resource: LooseUri, base: LooseUri): string => (
+    path.relative(asPath(resource), asPath(base))
 );
 
 export async function resolveToUri(resource: string): Promise<Uri | null> {
-    const uri = await toUri(resource);
+    const uri = await resolveUri(resource);
     return (await exists(uri)) ? uri : null;
 }
 export async function resolveToPath(resource: string): Promise<string | null> {

@@ -1,17 +1,23 @@
 import { Substitution, defaultSubstitutions } from '../../substitution';
 
-export interface PatternContext {
-    glob: string[];
+export interface OutputPatternContext {
+    captures: string[];
 }
 
-const globSubstitutions: Substitution<PatternContext>[] = [
+const globSubstitutions: Substitution<OutputPatternContext>[] = [
     ...defaultSubstitutions,
     {
-        pattern: /glob:(\d+)/,
-        resolver(ctx, indexStr): string {
+        pattern: 'inputFile',
+        resolver(ctx): string {
+            
+        }
+    },
+    {
+        pattern: /capture:(\d+)/,
+        resolver(ctx, indexStr: string): string {
             const index = Number.parseInt(indexStr);
-            if (typeof index === 'number' && index >= 0 && index < ctx.data.glob.length) {
-                return ctx.data.glob[index];
+            if (typeof index === 'number' && index >= 0 && index < ctx.data.captures.length) {
+                return ctx.data.captures[index];
             } else {
                 throw new RangeError('Glob index out of range!');
             }
@@ -19,9 +25,13 @@ const globSubstitutions: Substitution<PatternContext>[] = [
         }
     },
     {
-        pattern: /glob:count/,
-        resolver(ctx): string {
-            return String(ctx.data.glob.length);
-        }
+        /// TODO ::: think of a case where this might be useful?
+        pattern: /capture:count(NonEmpty)?/,
+        resolver: (ctx, nonEmpty: string | undefined): string => (
+            String((nonEmpty)
+                ? ctx.data.captures.filter(c => !!c).length
+                : ctx.data.captures.length
+            )
+        )
     }
 ];

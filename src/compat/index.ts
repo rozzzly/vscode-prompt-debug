@@ -3,7 +3,7 @@ import * as semver from 'semver';
 import * as JSON6 from 'json-6';
 
 import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext, TextEditor } from 'vscode';
-import { LooseUri, isDescendent, toUri, dirExists, fileExists, readFile } from '../fsTools';
+import { LooseUri, isDescendent, resolveUri, dirExists, fileExists, readFile } from '../fsTools';
 import { PREFIX, CONFIG_ID_FRAGMENTS } from '../constants';
 import { isEqual } from 'lodash';
 import { isArray } from 'util';

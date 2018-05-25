@@ -18,13 +18,22 @@ async function substituteInput(resolver: ExplicitGlobResolver, ctx: Partial<Subs
     return (subbed !== null) ? { ...resolver, subbedInput: subbed } : subbed;
 }
 
-export const matchesInput = (resource: Uri, resolver: SubbedExplicitGlobResolver): boolean => (
+async function substituteOutput(outputPattern: string, ctx: Partial<SubstitutionContext> = {}): Promise<string | null> {
+    const subbed = await substitute(outputPattern, ctx).then(v => v).catch(() => null);
+    return (subbed !== null) ? null;
+}
+
+const matchesInput = (resource: Uri, resolver: SubbedExplicitGlobResolver): boolean => (
     mm.isMatch(resource.fsPath, resolver.subbedInput, resolver.options)
 );
 
 export async function resolveOutput(resolver: SubbedExplicitGlobResolver, resource: Uri): Promise<Uri | null> {
-    // check the fs
-    return null;
+    const captures = mm.capture(resolver.subbedInput, resource.fsPath);
+    if (captures === null) {
+        return null;
+    } else {
+        return null;
+    }
 }
 
 export async function allMatchingResources(resolvers: ExplicitGlobResolver[], resources: Uri[]): Promise<ResourceResolutionMap>  {

@@ -35,7 +35,7 @@ async function ensureTsNode(): Promise<boolean> {
 
 
 export default async (): Promise<string | null> => {
-    const activeFileUri = getActiveFileUri();
+const activeFileUri = getActiveFileUri();
     if (activeFileUri) {
         const cfg = ''; //getUserConfig(activeFileUri).get<string>(CONFIG_IDs.scriptResolver);
         console.log('cfg:', cfg);
