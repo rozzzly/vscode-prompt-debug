@@ -4,6 +4,12 @@ export const PREFIX: 'prompt-debug' = 'prompt-debug';
 export const REJECTED: unique symbol = Symbol('RuntimeHint/REJECTED'); /// TODO ::: namespace this
 export type REJECTED = typeof REJECTED;
 
+export const NO_ARG: unique symbol = Symbol('RuntimeHint/NO_ARG'); /// TODO ::: namespace this
+export type NO_ARG = typeof NO_ARG;
+
+export const SOFT_REJECTION: unique symbol = Symbol('RuntimeHint/SOFT_REJECTION'); /// TODO ::: namespace this
+export type SOFT_REJECTION = typeof SOFT_REJECTION;
+
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////

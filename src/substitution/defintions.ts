@@ -1,9 +1,10 @@
-import { Substitution } from '.';
 import { commands } from 'vscode';
 import { getWorkspaceFolderByName, isWorkspaceOpen, getWorkspaceFolderUri } from '../compat';
 import { dropExt, relativePath, basename } from '../fsTools';
+import { Substitution } from './api';
 
 export const activeFileSubstitution: Substitution = {
+    identifier: 'activeFile',
     pattern: 'file(BaseName)?(NoExt)?',
     resolver(ctx, baseName: string | undefined, noExt: string | undefined): string {
         if (ctx.activeFile) {
@@ -26,6 +27,7 @@ export const activeFileSubstitution: Substitution = {
     }
 };
 export const relativeActiveFileSubstitution: Substitution = {
+    identifier: 'relativeActiveFile',
     pattern: /relativeFile(BaseName)?(NoExt)?/,
     async resolver(ctx, baseName: string | undefined, noExt: string | undefined): Promise<string> {
         if (ctx.activeFile) {
@@ -58,6 +60,7 @@ export const defaultSubstitutions: Substitution[] = [
     activeFileSubstitution,
     relativeActiveFileSubstitution,
     {
+        identifier: 'command',
         pattern: /command\:(\S+[\s\S]*)/,
         async resolver(ctx, command): Promise<string> {
             const cmds = await commands.getCommands();
@@ -69,6 +72,7 @@ export const defaultSubstitutions: Substitution[] = [
         }
     },
     {
+        identifier: 'workspace',
         pattern: /rootPath|workspace(?:Folder|Root)(?:\:([^\.]+)\:)?(BaseName)?/,
         async resolver(ctx, workspaceName: string | undefined, baseName: string | undefined): Promise<string> {
             if (isWorkspaceOpen()) {
