@@ -1,11 +1,3 @@
-import { mergeWith, uniq, isPlainObject, intersection, difference } from 'lodash';
-import { Substitution, defaultSubstitutions } from '../../substitution';
-import { ExecSyncOptionsWithBufferEncoding } from 'child_process';
-import { inherits, isArray } from 'util';
-import { getConfig } from '../../compat';
-import { Uri } from 'vscode';
-import { COMMAND_IDs, CONFIG_IDs } from '../../constants';
-
 export type UNDEFINED_KEYWORD = '@@[UNDEFINED]';
 export const UNDEFINED_KEYWORD: UNDEFINED_KEYWORD = '@@[UNDEFINED]';
 export type INHERITS_KEYWORD = '@@[INHERIT]';

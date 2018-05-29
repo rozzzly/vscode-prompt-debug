@@ -14,13 +14,13 @@ import {
 } from '../compat';
 
 import { SubstitutionContext, Substitution, createContext, isParameterized, isSimple } from './api';
-import { defaultSubstitutions } from './defintions';
+import { defaultSubstitutions } from './definitions';
 
 const userHome: RegExp = /^~/;
 const subEscapeSplitter: RegExp = /(\$\{\s*\S+?[\S\s]*?\s*\})/g;
 const subEscapeExtractor: RegExp = /\$\{\s*(\S+?[\S\s]*?)\s*\}/g;
 
-const containsSubstitution = (str: string): boolean => (
+export const containsSubstitution = (str: string): boolean => (
     str.includes('${') && subEscapeSplitter.test(str)
 );
 

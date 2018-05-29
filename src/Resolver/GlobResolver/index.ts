@@ -1,18 +1,14 @@
-import { Substitution, defaultSubstitutions } from '../../substitution';
+import { defaultSubstitutions } from '../../substitution/definitions';
+import { Substitution } from '../../substitution/api';
 
 export interface OutputPatternContext {
     captures: string[];
 }
 
-const globSubstitutions: Substitution<OutputPatternContext>[] = [
+export const globSubstitutions: Substitution<OutputPatternContext>[] = [
     ...defaultSubstitutions,
     {
-        pattern: 'inputFile',
-        resolver(ctx): string {
-            
-        }
-    },
-    {
+        identifier: 'capture',
         pattern: /capture:(\d+)/,
         resolver(ctx, indexStr: string): string {
             const index = Number.parseInt(indexStr);
@@ -26,6 +22,7 @@ const globSubstitutions: Substitution<OutputPatternContext>[] = [
     },
     {
         /// TODO ::: think of a case where this might be useful?
+        identifier: 'captureCount',
         pattern: /capture:count(NonEmpty)?/,
         resolver: (ctx, nonEmpty: string | undefined): string => (
             String((nonEmpty)

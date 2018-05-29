@@ -1,7 +1,7 @@
 import { getActiveFileUri } from '../../compat';
 import { getGlobResolverConfig } from './config';
 import { showWarning, showInfo, showError } from '../../compat/message';
-import { firstMatchingResolver } from './glob';
+import { firstMatch } from './glob';
 
 
 export default async (): Promise<string> => {
@@ -10,7 +10,7 @@ export default async (): Promise<string> => {
         const cfg = getGlobResolverConfig(activeFile);
         console.log(cfg);
         if (cfg) {
-            const resolver = firstMatchingResolver(cfg, activeFile);
+            const resolver = firstMatch(cfg, activeFile);
             if (resolver) {
                 return '';
             } else {

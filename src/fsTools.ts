@@ -12,11 +12,13 @@ export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
 export type LooseUri = string | Uri;
 
+export const getExt = (resource: LooseUri): string => path.extname(asPath(resource));
+
 export function dropExt(resource: LooseUri, ext?: string): string;
 export function dropExt(_resource: LooseUri, _ext?: string): string {
     const resource = asPath(_resource);
     const ext = ((_ext === undefined)
-        ? path.extname(resource)
+        ? getExt(resource)
         : _ext
     );
     if (resource.endsWith(ext)) {
