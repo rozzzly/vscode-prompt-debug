@@ -2,7 +2,6 @@ export const wrapRejection = <T, D>(
     promise: Promise<T>,
     defaultValue: D
 ) => ((promise)
-    .then(v => v)
     .catch(e => {
         console.error(e);
         return defaultValue;

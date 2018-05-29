@@ -9,121 +9,90 @@ import { predicateRace, wrapRejection } from '../../misc';
 import { fileExists } from '../../fsTools';
 import { globSubstitutions, OutputPatternContext } from '../GlobResolver';
 
-export interface Match {
+export interface GlobMatch {
     resolver: ExplicitGlobResolver;
     inputUri: Uri;
 }
 
-export interface ResolvedInput extends Match {
+export interface ResolvedGlobMatch extends GlobMatch {
     inputGlob: SingleGlob;
-}
-
-export interface ResolvedOutput extends ResolvedInput {
     outputUri: Uri;
 }
 
-export type ResourceResolutionMap = Map<Uri, ResolvedOutput[]>;
-export type TruncatedResourceResolutionMap = Map<Uri, ResolvedOutput>;
+export type ResourceResolutionMap = Map<Uri, ResolvedGlobMatch[]>;
+export type TruncatedResourceResolutionMap = Map<Uri, ResolvedGlobMatch>;
 
-export async function resolveInput(resource: Match): Promise<ResolvedInput | null> {
-    const inputGlob = await substitute(resource.resolver.input, { activeFile: resource.inputUri }).catch(() => null);
-    if (inputGlob === null) return null;
-    else {
-        if (mm.isMatch(resource.inputUri.fsPath, inputGlob, resource.resolver.options)) {
-            return {
-                ...resource,
-                inputGlob
-            };
+export async function resolveMatch({ resolver, inputUri }: GlobMatch): Promise<ResolvedGlobMatch | null> {
+    const inputGlob = await wrapRejection(substitute(resolver.input, { activeFile: inputUri }), null);
+    if (inputGlob !== null) {
+        if (mm.isMatch(inputUri.fsPath, inputGlob, resolver.options)) {
+            const captures = mm.capture(inputGlob, inputUri.fsPath, resolver.options) || [];
+            const outputPath = await wrapRejection(substitute<OutputPatternContext>(
+                resolver.input,
+                { activeFile: inputUri, data: { captures } },
+                globSubstitutions
+            ), null);
+
+            if (outputPath === null) return null;
+            else {
+                const outputUri = Uri.file(outputPath);
+                if (await fileExists(outputUri)) {
+                    return {
+                        resolver,
+                        inputUri,
+                        inputGlob,
+                        outputUri
+                    };
+                } else {
+                    return null;
+                }
+            }
         } else {
             return null;
         }
-    }
-}
-
-export async function resolveOutput(resource: ResolvedInput): Promise<ResolvedOutput | null> {
-    const captures = mm.capture(resource.inputGlob, resource.inputUri.fsPath) || [];
-    const outputPath = await substitute<OutputPatternContext>(
-        resource.resolver.input,
-        { activeFile: resource.inputUri, data: { captures } },
-        globSubstitutions
-    ).catch(() => null);
-
-    if (outputPath === null) return null;
-    else {
-        const outputUri = Uri.file(outputPath);
-        if (await fileExists(outputUri)) {
-            return {
-                ...resource,
-                outputUri
-            };
-        } else {
-            return null;
-        }
+    } else {
+        return null;
     }
 }
 
 export async function allMatches(resolvers: ExplicitGlobResolver[], resources: Uri[]): Promise<ResourceResolutionMap>;
-export async function allMatches(resolvers: ExplicitGlobResolver[], resource: Uri): Promise<ResolvedOutput[]>;
-export async function allMatches(resolvers: ExplicitGlobResolver[], resources: Uri | Uri[]): Promise<ResourceResolutionMap | ResolvedOutput[]> {
+export async function allMatches(resolvers: ExplicitGlobResolver[], resource: Uri): Promise<ResolvedGlobMatch[]>;
+export async function allMatches(resolvers: ExplicitGlobResolver[], resources: Uri | Uri[]): Promise<ResourceResolutionMap | ResolvedGlobMatch[]> {
     if (Array.isArray(resources)) {
         const matching: ResourceResolutionMap = new Map();
         await Promise.all(resources.map(async resource => {
-            const resolved = (await Promise.all(resolvers.map(async resolver => {
-                const input = await resolveInput({ resolver, inputUri: resource });
-                if (input !== null) {
-                    const output = await resolveOutput(input);
-                    if (output !== null) {
-                        return output;
-                    } else {
-                        return null;
-                    }
-                } else {
-                    return null;
-                }
-            }))).filter((v): v is ResolvedOutput => v !== null); // note use of explicit typeguard on Array.filter's predicate (typescript cant infer conditional in predicate)
+            const resolved = (await Promise.all(resolvers.map(resolver => (
+                resolveMatch({ resolver, inputUri: resource })
+            )))).filter((v): v is ResolvedGlobMatch => v !== null); // note use of explicit typeguard on Array.filter's predicate (typescript cant infer conditional in predicate)
             if (resolved.length) {
                 matching.set(resource, resolved);
             }
         }));
         return matching;
     } else {
-        const resultMap = await allMatches(resolvers, [ resources ]);
-        return ((resultMap.size)
-            ? resultMap.get(resources) as ResolvedOutput[]
-            : []
-        );
+        return (await Promise.all(resolvers.map(resolver => (
+            resolveMatch({ resolver, inputUri: resources })
+        )))).filter((v): v is ResolvedGlobMatch => v !== null);
     }
 }
 
-export async function firstMatch(resolvers: ExplicitGlobResolver[], resource: Uri): Promise<ResolvedOutput | null>;
+export async function firstMatch(resolvers: ExplicitGlobResolver[], resource: Uri): Promise<ResolvedGlobMatch | null>;
 export async function firstMatch(resolvers: ExplicitGlobResolver[], resources: Uri[]): Promise<TruncatedResourceResolutionMap>;
-export async function firstMatch(resolvers: ExplicitGlobResolver[], resources: Uri | Uri[]): Promise<TruncatedResourceResolutionMap | (ResolvedOutput | null)> {
+export async function firstMatch(resolvers: ExplicitGlobResolver[], resources: Uri | Uri[]): Promise<TruncatedResourceResolutionMap | (ResolvedGlobMatch | null)> {
     if (Array.isArray(resources)) {
         const matching: TruncatedResourceResolutionMap = new Map();
         await Promise.all(resources.map(async resource => {
-            const resolved = await wrapRejection(predicateRace(resolvers.map(async resolver => {
-                const input = await resolveInput({ resolver, inputUri: resource });
-                if (input !== null) {
-                    const output = await resolveOutput(input);
-                    if (output !== null) {
-                        return output;
-                    } else {
-                        return null;
-                    }
-                } else {
-                    return null;
-                }
-            }), v => v !== null), null);
+            const resolved = await wrapRejection(predicateRace(resolvers.map(resolver => (
+                resolveMatch({ resolver, inputUri: resource })
+            )), v => v !== null), null);
             if (resolved) {
                 matching.set(resource, resolved);
             }
         }));
         return matching;
     } else {
-        const resultMap = await firstMatch(resolvers, [ resources ]);
-        return ((resultMap.size)
-            ? resultMap.get(resources) as ResolvedOutput
-            : null
-        );
+        return wrapRejection(predicateRace(resolvers.map(resolver => (
+            resolveMatch({ resolver, inputUri: resources })
+        )), v => v !== null), null);
     }
 }

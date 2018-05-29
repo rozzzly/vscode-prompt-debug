@@ -5,7 +5,7 @@ import { Substitution } from './api';
 
 export const activeFileExtSubstitution: Substitution = {
     identifier: 'activeFileExtension',
-    pattern: 'activeFileExt',
+    pattern: /(?:activeF|f)ileExt/,
     resolver(ctx): string {
         if (ctx.activeFile) {
             return getExt(ctx.activeFile);
@@ -17,7 +17,7 @@ export const activeFileExtSubstitution: Substitution = {
 
 export const activeFileSubstitution: Substitution = {
     identifier: 'activeFile',
-    pattern: '(?:activeF|f)ile(BaseName)?(NoExt)?',
+    pattern: /(?:activeF|f)ile(BaseName)?(NoExt)?/,
     resolver(ctx, baseName: string | undefined, noExt: string | undefined): string {
         if (ctx.activeFile) {
             if (baseName) {
