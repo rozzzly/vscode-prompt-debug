@@ -1,9 +1,8 @@
 import * as ajv from 'ajv';
-import { valid } from 'semver';
+
 import GlobResolverConfigSchema from './GlobResolverConfig';
 import {
-    GlobResolverConfig,
-    GlobResolver
+    GlobResolverConfig
 } from '../Resolver/GlobResolver/schema';
 
 const schemaValidator = new ajv({

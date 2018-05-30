@@ -17,7 +17,7 @@
             ],
             "preLaunchTask": "build",
             "outFiles": [
-                "${workspaceFolder}/out/src/**/*.js"
+                "${workspaceFolder}/out/**/*.js"
             ]
         },
         {

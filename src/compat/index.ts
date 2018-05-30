@@ -126,12 +126,6 @@ export function getSelections(activeEditorOnly: boolean = false): Selection[] {
     }
 }
 
-export type ConfigScope = (
-    | 'user'
-    | 'workspace'
-    | 'workspaceFolders'
-);
-
 export function getConfig(resource?: Uri): WorkspaceConfiguration {
     if (resource && isMultiRootSupported) {
         return workspace.getConfiguration(PREFIX, resource);

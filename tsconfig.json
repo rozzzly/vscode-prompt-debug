@@ -18,7 +18,6 @@
     "pretty": true,
     "lib": ["es2017"],
     "rootDir": ".",
-    "sourceRoot": ".",
     "outDir": "out",
     "strictNullChecks": true,
     "typeRoots": [

@@ -10,9 +10,10 @@ export default async (): Promise<string> => {
         const cfg = getGlobResolverConfig(activeFile);
         console.log(cfg);
         if (cfg) {
-            const resolver = firstMatch(cfg, activeFile);
-            if (resolver) {
-                return '';
+            const resolved = await firstMatch(cfg, activeFile);
+            if (resolved) {
+                console.log({ resolved });
+                return resolved.outputUri.fsPath;
             } else {
                 console.info({ cfg, activeFile });
                 showError('No defined GlobResolver matches this resource.');

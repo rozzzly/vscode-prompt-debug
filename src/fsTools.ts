@@ -1,15 +1,15 @@
 import * as path from 'path';
 import * as fs from 'fs-extra-promise';
-import * as crypto from 'crypto';
-import * as JSON6 from 'json-6';
-import { homedir } from 'os';
-import { workspace, Uri, window as vsWindow } from 'vscode';
-import { substitute, containsSubstitution } from './substitution';
-import { isMultiRootSupported, isCaseInsensitive } from './compat';
 
+import { homedir } from 'os';
+import { Uri } from 'vscode';
+
+import { substitute, containsSubstitution } from './substitution';
+import { isCaseInsensitive } from './compat';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
+
 export type LooseUri = string | Uri;
 
 export const getExt = (resource: LooseUri): string => path.extname(asPath(resource));
@@ -58,6 +58,10 @@ export const asPath = (resource: LooseUri): string => (
         ? resource
         : resource.fsPath
     )
+);
+
+export const dirname = (resource: LooseUri): string => (
+    path.dirname(asPath(resource))
 );
 
 export const basename = (resource: LooseUri, ext?: string): string => (
