@@ -1,17 +1,23 @@
 import * as path from 'path';
-import * as semver from 'semver';
 import * as JSON6 from 'json-6';
+import * as semver from 'semver';
 
-import { Uri, workspace, WorkspaceFolder, version, WorkspaceConfiguration, ExtensionContext, TextEditor } from 'vscode';
-import { LooseUri, isDescendent, resolveUri, dirExists, fileExists, readFile } from '../fsTools';
-import { PREFIX, CONFIG_ID_FRAGMENTS } from '../constants';
-import { isEqual } from 'lodash';
-import { isArray } from 'util';
-import { window } from 'vscode';
-import { Selection } from 'vscode';
-import { TextEdit } from 'vscode';
+import {
+    Uri,
+    window,
+    version,
+    workspace,
+    Selection,
+    TextEditor,
+    WorkspaceFolder,
+    WorkspaceConfiguration,
+    ExtensionContext
+} from 'vscode';
 
-export const isCaseInsensitive = process.platform === 'win32';
+import { PREFIX } from '../constants';
+import { isDescendent, dirExists, fileExists, readFile } from '../fsTools';
+
+export const isWindows = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
 
 export const isWorkspaceOpen = (): boolean => (

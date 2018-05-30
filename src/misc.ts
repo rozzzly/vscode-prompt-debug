@@ -8,7 +8,6 @@ export const wrapRejection = <T, D>(
     })
 );
 
-
 export const predicateRace = <T>(
     promises: Promise<T>[],
     predicate: ((v: T) => boolean),

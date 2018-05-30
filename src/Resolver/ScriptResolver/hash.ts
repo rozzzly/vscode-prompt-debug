@@ -1,7 +1,7 @@
 import { Uri, ExtensionContext } from 'vscode';
 import { LooseUri } from '../../fsTools';
 import { isArray } from 'util';
-import { isCaseInsensitive } from '../../compat';
+import { isWindows } from '../../compat';
 
 const HISTORY_LIMIT: number = 25;
 const HISTORY_KEY: string = 'AutoResolver:hashStore';
@@ -60,8 +60,8 @@ function parse(serialized: string): ScriptHashRecord[] {
 
 function getIndex(hashes: ScriptHashRecord[], resource: ScriptHash): number | null;
 function getIndex(hashes: ScriptHashRecord[], _resource: ScriptHash): number | null {
-    const resource = (isCaseInsensitive) ? _resource.uri.toString() : _resource.uri.toString().toLowerCase();
-    const idx = hashes.findIndex(((isCaseInsensitive)
+    const resource = (isWindows) ? _resource.uri.toString() : _resource.uri.toString().toLowerCase();
+    const idx = hashes.findIndex(((isWindows)
         ? (hash => (
             resource === hash.uri.toString().toLowerCase()
         ))

@@ -1,11 +1,12 @@
 import * as path from 'path';
+import * as crypto from 'crypto';
 import * as fs from 'fs-extra-promise';
 
 import { homedir } from 'os';
 import { Uri } from 'vscode';
 
+import { isWindows } from './compat';
 import { substitute, containsSubstitution } from './substitution';
-import { isCaseInsensitive } from './compat';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
@@ -181,8 +182,8 @@ export async function readFile(resource: Uri, suppressErrors: boolean = true): P
 
 
 export function isDescendent(resource: Uri, base: Uri): boolean {
-    const resourceParts = path.normalize(isCaseInsensitive ? resource.fsPath.toLowerCase() : resource.fsPath).split(path.sep);
-    const baseParts = path.normalize(isCaseInsensitive ? base.fsPath.toLowerCase() : base.fsPath).split(path.sep);
+    const resourceParts = path.normalize(isWindows ? resource.fsPath.toLowerCase() : resource.fsPath).split(path.sep);
+    const baseParts = path.normalize(isWindows ? base.fsPath.toLowerCase() : base.fsPath).split(path.sep);
 
     if (baseParts.length > resourceParts.length) {
         return false;

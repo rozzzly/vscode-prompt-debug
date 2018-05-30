@@ -10,13 +10,15 @@ import {
     getWorkspaceFolderByName,
     PotentiallyFauxWorkspaceFolder,
     getOpenFiles,
-    getWorkspaceFolderUri
+    getWorkspaceFolderUri,
+    isWindows
 } from '../compat';
 
 import { SubstitutionContext, Substitution, createContext, isParameterized, isSimple } from './api';
 import { defaultSubstitutions } from './definitions';
 
 const userHome: RegExp = /^~/;
+const foreignPathSeparator: RegExp = (isWindows) ? /\//g : /\\/g;
 const subEscapeSplitter: RegExp = /(\$\{\s*\S+?[\S\s]*?\s*\})/g;
 const subEscapeExtractor: RegExp = /\$\{\s*(\S+?[\S\s]*?)\s*\}/g;
 
@@ -35,6 +37,7 @@ export const substitute = <C extends {} = {}>(
 ): Promise<string> => (
     Promise.all((str)
         .replace(userHome, homeDirUri.fsPath)
+        .replace(foreignPathSeparator, path.sep)
         .split(subEscapeSplitter)
         .map(piece => new Promise<string>((resolve, reject) => {
             const fullCTX = createContext(ctx);

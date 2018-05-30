@@ -22,6 +22,8 @@ export interface ResolvedGlobMatch extends GlobMatch {
 export type ResourceResolutionMap = Map<Uri, ResolvedGlobMatch[]>;
 export type TruncatedResourceResolutionMap = Map<Uri, ResolvedGlobMatch>;
 
+/// TODO [fix]: micromatch won't allow window path separators in pattern
+
 export async function resolveMatch({ resolver, inputUri }: GlobMatch): Promise<ResolvedGlobMatch | null> {
     const inputGlob = await wrapRejection(substitute(resolver.input, { activeFile: inputUri }), null);
     if (inputGlob !== null) {
