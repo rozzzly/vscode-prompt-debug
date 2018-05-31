@@ -1,7 +1,7 @@
 import { Uri } from 'vscode';
 import { mergeWith, tap, isPlainObject, uniq } from 'lodash';
 
-import { getConfig } from '../../compat';
+import { getConfig } from '../../compat/config';
 import { CONFIG_IDs } from '../../constants';
 import { INHERITS_KEYWORD, GlobOptions, GlobResolverConfig, GlobResolver, PartialGlobOptions, UNDEFINED_KEYWORD, SingleGlob } from './schema';
 
@@ -69,6 +69,9 @@ export const mergeOptions = (...opts: (PartialGlobOptions | undefined)[]): GlobO
     return v;
 });
 
+
+///  TODO :: factor out `suppressErrors`
+///  TODO :: throw error (custom/extended) but log nothing --> let wrapper cover that
 export function normalizeResolverConfig(raw: GlobResolverConfig): ExplicitGlobResolver[];
 export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors: true): ExplicitGlobResolver[] | null;
 export function normalizeResolverConfig(raw: GlobResolverConfig, suppressErrors: false): ExplicitGlobResolver[];

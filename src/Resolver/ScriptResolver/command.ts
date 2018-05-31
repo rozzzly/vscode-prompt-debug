@@ -1,10 +1,11 @@
 import * as decache from 'decache';
-import { Uri } from 'vscode';
-import { CONFIG_ID_FRAGMENTS, CONFIG_IDs } from '../../constants';
-import * as fsTools from '../../fsTools';
 import * as _tsNode from 'ts-node';
+
+import { Uri } from 'vscode';
+
+import * as fsTools from '../../fsTools';
 import { substitute } from '../../substitution';
-import { getUserConfig, getActiveFileUri } from '../../compat';
+import { getActiveFileUri } from '../../compat';
 import { ScriptResolverScript } from '../ScriptResolver';
 
 let tsNode: typeof _tsNode | null | false = null;

@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs-extra-promise';
-import * as path from 'path';
 
 import { resolveToPath } from './fsTools';
 import { COMMAND_CANONICAL_IDs } from './constants';
-import { workspace } from 'vscode';
-import { findUserConfig, getActiveFilePath } from './compat';
+import { getActiveFilePath } from './compat';
+import { findUserConfig } from './compat/config';
 import { DisposableHandle } from './runtime';
 
 import run from './runtime';

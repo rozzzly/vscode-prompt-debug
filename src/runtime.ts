@@ -1,5 +1,5 @@
 import { ExtensionContext, Disposable, workspace } from 'vscode';
-import { findUserConfig } from './compat';
+import { findUserConfig } from './compat/config';
 import { registerCmds } from './commands';
 
 const TAG_DisposableHandle: unique symbol = Symbol('TaggedTypes/DisposableHandle'); /// TODO ::: namespace this

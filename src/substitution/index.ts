@@ -1,5 +1,3 @@
-import * as path from 'path';
-import { workspace, commands, Uri } from 'vscode';
 import { relativePath, homeDirUri, dropExt } from '../fsTools';
 import {
     isWorkspaceOpen,
