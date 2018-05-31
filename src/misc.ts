@@ -3,7 +3,7 @@ export const wrapRejection = <T, D>(
     defaultValue: D
 ) => ((promise)
     .catch(e => {
-        console.error(e);
+        console.warn(e);
         return defaultValue;
     })
 );
@@ -24,7 +24,7 @@ export const predicateRace = <T>(
                     }
                 })
                 .catch(e => {
-                    console.log(e);
+                    console.warn(e);
                 })
             ))).then(() => {
                 if (!resolved) reject('None of the promisee resolved successfully.');
@@ -54,7 +54,7 @@ export const rejectionRace = <T>(promises: Promise<T>[]): Promise<T> => (
                 resolve(v);
             })
             .catch(e => {
-                console.log(e);
+                console.warn(e);
             })
         ))).then(() => {
             if (!resolved) reject('None of the promisee resolved successfully.');

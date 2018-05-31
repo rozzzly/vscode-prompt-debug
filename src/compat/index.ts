@@ -15,10 +15,24 @@ import {
 } from 'vscode';
 
 import { PREFIX } from '../constants';
-import { isDescendent, dirExists, fileExists, readFile } from '../fsTools';
+import { isDescendent, dirExists, fileExists, readFile, LooseUri, asPath } from '../fsTools';
 
 export const isWindows = process.platform === 'win32';
 export const isMultiRootSupported: boolean = semver.gte(semver.coerce(version)!, semver.coerce('v1.18')!);
+
+
+const UNIX_PATH_SEP: string = '/';
+const UNIX_PATH_SEP_REGEXP: RegExp = /\//g;
+
+const WINDOWS_PATH_SEP: string = '\\';
+const WINDOWS_PATH_SEP_REGEXP: RegExp = /\\/g;
+
+export const convertPathSeparators = (resource: LooseUri, forceUnix: boolean = false): string => (
+    ((isWindows && !forceUnix)
+        ? asPath(resource).replace(UNIX_PATH_SEP_REGEXP, WINDOWS_PATH_SEP)
+        : asPath(resource).replace(WINDOWS_PATH_SEP_REGEXP, UNIX_PATH_SEP)
+    )
+);
 
 export const isWorkspaceOpen = (): boolean => (
     !!(isMultiRootSupported && workspace.workspaceFolders && workspace.workspaceFolders.length > 0)

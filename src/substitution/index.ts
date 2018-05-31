@@ -37,7 +37,6 @@ export const substitute = <C extends {} = {}>(
 ): Promise<string> => (
     Promise.all((str)
         .replace(userHome, homeDirUri.fsPath)
-        .replace(foreignPathSeparator, path.sep)
         .split(subEscapeSplitter)
         .map(piece => new Promise<string>((resolve, reject) => {
             const fullCTX = createContext(ctx);
@@ -70,5 +69,5 @@ export const substitute = <C extends {} = {}>(
                 resolve(piece);
             }
         }))
-    ).then(pieces => path.join(...pieces))
+    ).then(pieces => pieces.join(''))
 );

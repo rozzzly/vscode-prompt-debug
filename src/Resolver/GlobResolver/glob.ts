@@ -8,6 +8,7 @@ import { substitute } from '../../substitution';
 import { predicateRace, wrapRejection } from '../../misc';
 import { fileExists } from '../../fsTools';
 import { globSubstitutions, OutputPatternContext } from '../GlobResolver';
+import { convertPathSeparators } from '../../compat';
 
 export interface GlobMatch {
     resolver: ExplicitGlobResolver;
@@ -22,22 +23,24 @@ export interface ResolvedGlobMatch extends GlobMatch {
 export type ResourceResolutionMap = Map<Uri, ResolvedGlobMatch[]>;
 export type TruncatedResourceResolutionMap = Map<Uri, ResolvedGlobMatch>;
 
-/// TODO [fix]: micromatch won't allow window path separators in pattern
+/// TODO [fix]: micromatch won't allow windows-styled path separators in pattern
 
 export async function resolveMatch({ resolver, inputUri }: GlobMatch): Promise<ResolvedGlobMatch | null> {
-    const inputGlob = await wrapRejection(substitute(resolver.input, { activeFile: inputUri }), null);
-    if (inputGlob !== null) {
-        if (mm.isMatch(inputUri.fsPath, inputGlob, resolver.options)) {
-            const captures = mm.capture(inputGlob, inputUri.fsPath, resolver.options) || [];
-            const outputPath = await wrapRejection(substitute<OutputPatternContext>(
-                resolver.input,
+    const dirtyInputGlob = await wrapRejection(substitute(resolver.input, { activeFile: inputUri }), null);
+    if (dirtyInputGlob !== null) {
+        const inputGlob = convertPathSeparators(dirtyInputGlob, true);
+        const unixPath = convertPathSeparators(inputUri.fsPath, true);
+        if (mm.isMatch(unixPath, inputGlob, resolver.options)) {
+            const captures = mm.capture(inputGlob, unixPath, resolver.options) || [];
+            const dirtyOutputPath = await wrapRejection(substitute<OutputPatternContext>(
+                resolver.output,
                 { activeFile: inputUri, data: { captures } },
                 globSubstitutions
             ), null);
 
-            if (outputPath === null) return null;
+            if (dirtyOutputPath === null) return null;
             else {
-                const outputUri = Uri.file(outputPath);
+                const outputUri = Uri.file(convertPathSeparators(dirtyOutputPath));
                 if (await fileExists(outputUri)) {
                     return {
                         resolver,

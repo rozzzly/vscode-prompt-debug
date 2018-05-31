@@ -9,7 +9,7 @@ export const globSubstitutions: Substitution<OutputPatternContext>[] = [
     ...defaultSubstitutions,
     {
         identifier: 'capture',
-        pattern: /capture:(\d+)/,
+        pattern: /(?:capture|glob):(\d+)/,
         resolver(ctx, indexStr: string): string {
             const index = Number.parseInt(indexStr);
             if (typeof index === 'number' && index >= 0 && index < ctx.data.captures.length) {
@@ -23,7 +23,7 @@ export const globSubstitutions: Substitution<OutputPatternContext>[] = [
     {
         /// TODO ::: think of a case where this might be useful?
         identifier: 'captureCount',
-        pattern: /capture:count(NonEmpty)?/,
+        pattern: /(?:capture|glob):count(NonEmpty)?/,
         resolver: (ctx, nonEmpty: string | undefined): string => (
             String((nonEmpty)
                 ? ctx.data.captures.filter(c => !!c).length
