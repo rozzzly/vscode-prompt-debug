@@ -1,8 +1,8 @@
 export const DISPLAY_NAME: '[[ prompt-debug ]]' = '[[ prompt-debug ]]';
 export const PREFIX: 'prompt-debug' = 'prompt-debug';
 
-export const REJECTED: unique symbol = Symbol('RuntimeHint/REJECTED'); /// TODO ::: namespace this
-export type REJECTED = typeof REJECTED;
+export const NO_RESULT: unique symbol = Symbol('RuntimeHint/NO_RESULT'); /// TODO ::: namespace this
+export type NO_RESULT = typeof NO_RESULT; /// TODO ::: namespace this
 
 export const NO_ARG: unique symbol = Symbol('RuntimeHint/NO_ARG'); /// TODO ::: namespace this
 export type NO_ARG = typeof NO_ARG;

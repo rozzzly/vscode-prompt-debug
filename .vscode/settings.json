@@ -1,7 +1,3 @@
 {
-    "typescript.tsdk": "node_modules\\typescript\\lib",
-    "typescript.navigator.active": false,
-    "typescript.navigator.showVisibilityLabels": false,
-    "typescript.navigator.showIcons": false,
-    "typescript.navigator.showDataTypes": true
+    "typescript.navigator.active": false
 }

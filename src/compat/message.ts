@@ -1,5 +1,6 @@
 import { window as vsWindow } from 'vscode';
 import { DISPLAY_NAME } from '../constants';
+import { BError } from './BError';
 
 export type MessageKind = (
     | 'error'
@@ -27,5 +28,23 @@ export function show(text: string, kind: MessageKind, modal: boolean = false): v
         default:
             console.error(new TypeError('Unexpected MessageKind!'));
             break;
+    }
+}
+
+export interface DisplayedErrorOpts {
+    kind: MessageKind;
+    modal?: boolean;
+}
+export class DisplayedError<M extends {}> extends BError<M> {
+    public kind: MessageKind;
+    public modal: boolean = false;
+
+    public constructor(message: string, opts: DisplayedErrorOpts);
+    public constructor(message: string, opts: DisplayedErrorOpts, meta: M);
+    public constructor(message: string, opts: DisplayedErrorOpts, meta?: M) {
+        super(message, meta);
+        this.kind = opts.kind;
+        this.modal = opts.modal !== undefined ? opts.modal : false;
+        show(this.message, this.kind, this.modal);
     }
 }

@@ -4,27 +4,32 @@ describe('objLookup', () => {
     const obj = {
         dot: {
             joined: {
-                paths: 'success'
+                paths: {
+                    are: 'fun'
+                }
             }
         }
     };
     describe('traversal behavior', () => {
-        it('takes complete dot.joined.paths to get leaf nodes of a deeply nested object', () => {
-            expect(objLookup(obj, 'dot.joined.paths')).toEqual('success');
+        it('takes complete dot.joined.paths to get terminal nodes of a deeply nested object', () => {
+            expect(objLookup(obj, 'dot.joined.paths.are')).toEqual('fun');
         });
 
-        it('accepts partial dot.joined.paths to access (non-terminal/non-leaf) nodes of a nested object object', () => {
+        describe('recursive traversal', () => {
             const dot = objLookup(obj, 'dot');
-            expect(dot).toEqual({ joined: { paths: 'success' }});
 
-            it('can be run recursively on resulting non-terminal nodes to inspect deeper', () => {
+            it('can be run recursively on non-terminal nodes to inspect deeper', () => {
                 const joined = objLookup(dot, 'joined');
-                expect(joined).toEqual({ paths: 'success' });
-                expect(objLookup(joined, 'paths')).toEqual('success');
+                expect(joined).toEqual({ paths: { are: 'fun' } });
+                const paths = objLookup(joined, 'paths');
+                expect(paths).toEqual({ are: 'fun'});
+                expect(objLookup(paths, 'are')).toEqual('fun');
             });
-
-            it('can of course still use dot.joined.paths when recursively inspecting non-terminal nodes', () => {
-                expect(objLookup(dot, 'joined.paths')).toEqual('success');
+            it('accepts partial dot.joined.paths to to traverse multiple non-terminal nodes', () => {
+                expect(objLookup(dot, 'joined.paths')).toEqual({ are: 'fun'});
+            });
+            it('can use complete dot.joined.paths to access terminal nodes', () => {
+                expect(objLookup(dot, 'joined.paths.are')).toEqual('fun');
             });
         });
     });

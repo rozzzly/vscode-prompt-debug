@@ -1,6 +1,6 @@
 import { getActiveFileUri } from '../../compat';
 import { getGlobResolverConfig } from './config';
-import { showWarning, showInfo, showError } from '../../compat/message';
+import { showWarning, showError } from '../../compat/message';
 import { firstMatch } from './glob';
 
 

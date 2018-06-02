@@ -1,6 +1,7 @@
 import * as JSON6 from 'json-6';
 import * as path from 'path';
 
+import { isPlainObject } from 'lodash';
 import {
     Uri,
     workspace,
@@ -9,7 +10,7 @@ import {
 } from 'vscode';
 
 import { readFile, dirExists, fileExists } from '../fsTools';
-import { PREFIX } from '../constants';
+import { PREFIX, NO_ARG, NO_RESULT } from '../constants';
 import { isMultiRootSupported } from '../compat';
 
 export function getConfig(resource?: Uri): WorkspaceConfiguration {
@@ -62,12 +63,10 @@ export async function findUserConfig(context: ExtensionContext): Promise<Uri | n
         }
     }
 }
-export const configKeyNotFound: unique symbol = Symbol('configKeyNotFound'); /// TODO ::: namespace this
-export type configKeyNotFound = typeof configKeyNotFound; /// TODO ::: namespace this
 
-export function objLookup<T>(config: object, key: string): T;
+export function objLookup<T>(config: object, key: string): T | NO_RESULT;
 export function objLookup<T, D>(config: object, key: string, defaultValue: D): T | D;
-export function objLookup<T>(config: object, key: string, defaultValue: T | configKeyNotFound = configKeyNotFound): T | configKeyNotFound {
+export function objLookup<T, D>(config: object, key: string, defaultValue: T | D | NO_ARG = NO_ARG): T | D | NO_RESULT {
     let node: any = config;
     let allParts = key.split('.');
     let parts: string[] = [...allParts]; // x.y.z => x, y, z
@@ -75,25 +74,33 @@ export function objLookup<T>(config: object, key: string, defaultValue: T | conf
     let selectedKeys: string[] = [];
     while (true) {
         const keys = Object.keys(node);
-        const joined = parts.join('.');
-        if (keys.includes(joined)) {
-            selectedKeys.push(joined);
-            if (unusedParts.length) {
-                node = node[joined];
-                parts = [...unusedParts];
-                unusedParts = [];
+        if (parts.length) {
+            const joined = parts.join('.');
+            if (keys.includes(joined)) {
+                selectedKeys.push(joined);
+                if (unusedParts.length) {
+                    // more things to traverse
+                    node = node[joined];
+                    parts = [...unusedParts];
+                    unusedParts = [];
+                } else {
+                    if (isPlainObject(node[joined])) {
+                        objLookup(node[joined], joined)
+                    }
+                    return node[joined];
+                }
+            } else if (parts.length > 1) {
+                // given: x, y, z
+                const left = parts.slice(0, -1); // x, y
+                const right = parts.slice(-1); // z
+                unusedParts = [...right, ...unusedParts];
+                parts = [...left]; // will have 1 or more items
             } else {
-                return node[joined];
+                return 
             }
-        } else if (parts.length > 1) {
-            // given: x, y, z
-            const left = parts.slice(0, -1); // x, y
-            const right = parts.slice(-1); // z
-            unusedParts = [...right, ...unusedParts];
-            parts = [...left]; // will have 1 or more items
         } else {
-            if (defaultValue !== configKeyNotFound) return defaultValue;
-            else return configKeyNotFound; /// TODO ::: change behavior to throw in this case
+            if (defaultValue !== NO_ARG) return defaultValue;
+            else return NO_RESULT; /// TODO ::: change behavior to throw in this case
         }
     }
 }
