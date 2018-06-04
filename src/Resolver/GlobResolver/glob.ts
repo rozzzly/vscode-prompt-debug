@@ -5,7 +5,7 @@ import { Uri } from 'vscode';
 import { SingleGlob } from './schema';
 import { ExplicitGlobResolver } from './config';
 import { substitute } from '../../substitution';
-import { predicateRace, wrapRejection } from '../../misc';
+import { predicateRace, fallback } from '../../misc';
 import { fileExists } from '../../fsTools';
 import { globSubstitutions, OutputPatternContext } from '../GlobResolver';
 import { convertPathSeparators } from '../../compat';
@@ -24,13 +24,13 @@ export type ResourceResolutionMap = Map<Uri, ResolvedGlobMatch[]>;
 export type TruncatedResourceResolutionMap = Map<Uri, ResolvedGlobMatch>;
 
 export async function resolveMatch({ resolver, inputUri }: GlobMatch): Promise<ResolvedGlobMatch | null> {
-    const dirtyInputGlob = await wrapRejection(substitute(resolver.input, { activeFile: inputUri }), null);
+    const dirtyInputGlob = await fallback(substitute(resolver.input, { activeFile: inputUri }), null);
     if (dirtyInputGlob !== null) {
         const inputGlob = convertPathSeparators(dirtyInputGlob, true);
         const unixPath = convertPathSeparators(inputUri.fsPath, true);
         if (mm.isMatch(unixPath, inputGlob, resolver.options)) {
             const captures = mm.capture(inputGlob, unixPath, resolver.options) || [];
-            const dirtyOutputPath = await wrapRejection(substitute<OutputPatternContext>(
+            const dirtyOutputPath = await fallback(substitute<OutputPatternContext>(
                 resolver.output,
                 { activeFile: inputUri, data: { captures } },
                 globSubstitutions
@@ -85,7 +85,7 @@ export async function firstMatch(resolvers: ExplicitGlobResolver[], resources: U
     if (Array.isArray(resources)) {
         const matching: TruncatedResourceResolutionMap = new Map();
         await Promise.all(resources.map(async resource => {
-            const resolved = await wrapRejection(predicateRace(resolvers.map(resolver => (
+            const resolved = await fallback(predicateRace(resolvers.map(resolver => (
                 resolveMatch({ resolver, inputUri: resource })
             )), v => v !== null), null);
             if (resolved) {
@@ -94,7 +94,7 @@ export async function firstMatch(resolvers: ExplicitGlobResolver[], resources: U
         }));
         return matching;
     } else {
-        return wrapRejection(predicateRace(resolvers.map(resolver => (
+        return fallback(predicateRace(resolvers.map(resolver => (
             resolveMatch({ resolver, inputUri: resources })
         )), v => v !== null), null);
     }

@@ -1,3 +1,4 @@
 {
-    "typescript.navigator.active": false
+    "typescript.navigator.active": false,
+    "typescript.tsdk": "node_modules\\typescript\\lib"
 }

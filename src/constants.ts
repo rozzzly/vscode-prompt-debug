@@ -7,8 +7,7 @@ export type NO_RESULT = typeof NO_RESULT; /// TODO ::: namespace this
 export const NO_ARG: unique symbol = Symbol('RuntimeHint/NO_ARG'); /// TODO ::: namespace this
 export type NO_ARG = typeof NO_ARG;
 
-export const SOFT_REJECTION: unique symbol = Symbol('RuntimeHint/SOFT_REJECTION'); /// TODO ::: namespace this
-export type SOFT_REJECTION = typeof SOFT_REJECTION;
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////

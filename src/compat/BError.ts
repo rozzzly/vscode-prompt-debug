@@ -1,28 +1,33 @@
-export class BError<M extends {} = {}> extends Error {
-    public name: string;
-    public timestamp: Date;
-    public message: string;
-    public meta: M | undefined;
-    public extMessage: string;
-    public stack: string | undefined;
+import { Rejectable, REJECTIONABLE } from '../misc';
 
-    public constructor(message: string, meta?: M) {
-        super(message);
+export abstract class BError<M extends {} = {}> extends Error implements Rejectable<BError<M>> {
+    public [REJECTIONABLE]: this = this;
+    public timestamp: Date;
+    public name: string;
+
+    public meta: M;
+    public stack?: string;
+    public message: string;
+    public extMessage: string;
+
+    public constructor(meta?: M);
+    public constructor(meta: M = {} as any) {
+        super(); // NOTE: message might be undefined but will be set later with `this.getMessage()`
         // make sure Error type displays correctly
         this.name = this.constructor.name;
-
-        this.meta = meta;
         this.timestamp = new Date();
+        this.meta = meta;
+        this.message = this.getMessage();
         this.extMessage = this.getExtMessage();
-
         // ensure stack trace gets in there
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
         } else {
-            this.stack = (new Error(message)).stack;
+            this.stack = (new Error(this.message)).stack;
         }
-
     }
+
+    protected abstract getMessage(): string;
 
     protected getExtMessage(): string {
         return this.message;

@@ -31,20 +31,23 @@ export function show(text: string, kind: MessageKind, modal: boolean = false): v
     }
 }
 
-export interface DisplayedErrorOpts {
-    kind: MessageKind;
-    modal?: boolean;
-}
-export class DisplayedError<M extends {}> extends BError<M> {
-    public kind: MessageKind;
-    public modal: boolean = false;
+export const DisplayableErrorOpts: unique symbol = Symbol('DisplayableErrorOpts');
+export type DisplayableErrorOpts = typeof DisplayableErrorOpts;
 
-    public constructor(message: string, opts: DisplayedErrorOpts);
-    public constructor(message: string, opts: DisplayedErrorOpts, meta: M);
-    public constructor(message: string, opts: DisplayedErrorOpts, meta?: M) {
-        super(message, meta);
-        this.kind = opts.kind;
-        this.modal = opts.modal !== undefined ? opts.modal : false;
-        show(this.message, this.kind, this.modal);
-    }
+export interface DisplayableErrorOptions {
+    kind: MessageKind;
+    modal: boolean;
 }
+
+export abstract class DisplayableError<M extends {}> extends BError<M> {
+    protected [DisplayableErrorOpts]: DisplayableErrorOptions;
+}
+
+export const isDisplayableError = (error: any): error is DisplayableError<any> => !!error[DisplayableErrorOpts];
+
+export const displayError = (error: Error) => (
+    ((isDisplayableError(error))
+        ? show(error.message, error[DisplayableErrorOpts].kind, error[DisplayableErrorOpts].modal)
+        : show(error.toString(), 'error', false) // assume this generic error should just be displayed with the highest priority
+    )
+);
