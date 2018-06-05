@@ -1,13 +1,16 @@
-import { NavigationBarItem } from 'typescript';
+import { BError } from './compat/BError';
 
-export const fallback = <T, D, R = any>(
+export const wrapDefault = <T, D, R = any>(
     promise: Promise<T>,
     defaultValue: D,
-    callback: ((reason: Rejectable<R>) => void) = console.warn
-): Promise<T | D> => ((promise)
-    .catch(e => {
-        callback(rejectify(e));
-        return defaultValue;
+    callback: ((reason: Rejection<R>) => void) = console.warn
+): Promise<T | D> => ((wrapRejection(promise, callback))
+    .then(ret => {
+        if (isRejection(ret)) {
+            return defaultValue;
+        } else {
+            return ret;
+        }
     })
 );
 
@@ -19,16 +22,21 @@ export const PRIMITIVE_REJECTION: unique symbol = Symbol('RuntimeHint/PRIMITIVE_
 export type PRIMITIVE_REJECTION = typeof PRIMITIVE_REJECTION;
 
 
-export interface Rejectable<T = any> {
-    [REJECTABLE]: T;
+export interface Rejectable {
+    [REJECTABLE]: true;
 }
+export type ExoticRejection<T> = (
+    & T
+    & Rejectable
+);
+
 export type Primitive = (
     | number
     | string
     | null
     | undefined
 );
-export interface PrimitiveRejection<T extends Primitive> extends Rejectable<T> {
+export interface PrimitiveRejection<T extends Primitive> extends Rejectable {
     [PRIMITIVE_REJECTION]: true;
     reason: T;
 }
@@ -36,45 +44,82 @@ export interface PrimitiveRejection<T extends Primitive> extends Rejectable<T> {
 export type Rejection<T> = (
     (T extends Primitive
         ? PrimitiveRejection<T>
-        : Rejectable<T>
+        : ExoticRejection<T>
     )
 );
 
-export function rejectify<T>(value: any): Rejection<T> {
+export function rejectify<T>(value: T): Rejection<T>;
+export function rejectify<T extends Primitive>(value: T): Rejection<T>;
+export function rejectify(value: any): Rejection<any> {
     if (isRejection(value)) {
         return value as any;
     } else {
-        if (Object.isFrozen(value)) {
+        if (isPrimitive(value)) {
             return {
-                [REJECTABLE]: value,
+                [REJECTABLE]: true,
                 [PRIMITIVE_REJECTION]: true,
                 reason: value
-            } as any;
+            };
         } else {
-            value[REJECTABLE] = value;
-            return value;
+            value[REJECTABLE] = true;
+            if (value[REJECTABLE] === true) {
+                return value;
+            } else {
+                return {
+                    [REJECTABLE]: true,
+                    [PRIMITIVE_REJECTION]: true,
+                    reason: value
+                };
+            }
         }
     }
 }
 
-const isRejection = (value: any): value is Rejection<any> => (
-    value && !!value[REJECTABLE]
+const isPrimitive = (value: any): value is Primitive => (
+    Object.isFrozen(value)
+);
+
+const isRejection = (value: any): value is Rejectable => (
+    value && value[REJECTABLE] === true
 );
 
 const isPrimitiveRejection = (value: any): value is PrimitiveRejection<any> => (
     isRejection(value) && (value as any)[PRIMITIVE_REJECTION] === true
 );
 
-export const wrap = <P, T, R extends Rejectable<T>>(
-    promise: Promise<P>
-): Promise<P | R> => ((promise)
-    .catch((e: any) => rejectify<T>(e));
+const isExoticRejection = (value: any): value is PrimitiveRejection<any> => (
+    isRejection(value) && !(value as any)[PRIMITIVE_REJECTION]
 );
 
-export const predicateRace = <T>(
+export const wrapRejection = <P, T>(
+    promise: Promise<P>,
+    logCallback: ((reason: Rejection<T>) => void) = console.warn
+): Promise<P | Rejection<T>> => ((promise)
+    .catch((e: T) => {
+        const rejection = rejectify(e);
+        logCallback(rejection);
+        return rejection;
+    })
+);
+
+export interface UnresolvedRaceErrorMeta {
+    predicate?: (v: any) => boolean;
+    promises: Promise<any>[];
+}
+export class UnresolvedRaceError extends BError<UnresolvedRaceErrorMeta> {
+    protected getMessage(): string {
+        return ((this.meta.predicate)
+            ? 'None of the supplied promises resolved successfully.'
+            : 'None of the supplied promises resolved successfully and passed the predicate.'
+        );
+    }
+}
+
+export const predicateRace = <T, R>(
     promises: Promise<T>[],
     predicate: ((v: T) => boolean),
-    suppressRejections: boolean = true
+    suppressRejections: boolean = true,
+    logCallback: ((reason: Rejection<R>) => void) = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
@@ -87,10 +132,12 @@ export const predicateRace = <T>(
                     }
                 })
                 .catch(e => {
-                    console.warn(e);
+                    logCallback(rejectify(e));
                 })
             ))).then(() => {
-                if (!resolved) reject('None of the promisee resolved successfully.');
+                if (!resolved) {
+                    throw new UnresolvedRaceError({ promises, predicate });
+                }
             });
         } else {
             Promise.all(promises.map(promise => ((promise)
@@ -101,14 +148,19 @@ export const predicateRace = <T>(
                     }
                 })
             ))).then(() => {
-                if (!resolved) reject('None of the promisee resolved successfully.');
+                if (!resolved) {
+                    throw new UnresolvedRaceError({ promises, predicate });
+                }
             });
         }
     })
 );
 
 
-export const rejectionRace = <T>(promises: Promise<T>[]): Promise<T> => (
+export const rejectionRace = <T, R>(
+    promises: Promise<T>[],
+    logCallback: ((reason: Rejection<R>) => void) = console.warn
+): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
         Promise.all(promises.map(promise => ((promise)
@@ -117,10 +169,14 @@ export const rejectionRace = <T>(promises: Promise<T>[]): Promise<T> => (
                 resolve(v);
             })
             .catch(e => {
-                console.warn(e);
+                logCallback(e);
             })
         ))).then(() => {
-            if (!resolved) reject('None of the promisee resolved successfully.');
+            if (!resolved) {
+                reject(new UnresolvedRaceError({
+                    promises
+                }));
+            }
         });
     })
 );

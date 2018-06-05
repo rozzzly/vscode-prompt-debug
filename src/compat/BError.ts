@@ -1,7 +1,7 @@
-import { Rejectable, REJECTIONABLE } from '../misc';
+import { Rejectable, REJECTABLE } from '../misc';
 
-export abstract class BError<M extends {} = {}> extends Error implements Rejectable<BError<M>> {
-    public [REJECTIONABLE]: this = this;
+export abstract class BError<M extends {} = {}> extends Error implements Rejectable {
+    public [REJECTABLE]: true = true;
     public timestamp: Date;
     public name: string;
 
@@ -12,7 +12,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecta
 
     public constructor(meta?: M);
     public constructor(meta: M = {} as any) {
-        super(); // NOTE: message might be undefined but will be set later with `this.getMessage()`
+        super('UNIMPLEMENTED'); // NOTE: message might be undefined but will be set later with `this.getMessage()`
         // make sure Error type displays correctly
         this.name = this.constructor.name;
         this.timestamp = new Date();
