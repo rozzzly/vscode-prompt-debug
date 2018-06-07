@@ -39,3 +39,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecta
 
 
 }
+const { ...definitions } = BError.prototype;
+BError.prototype = Object.create(Error.prototype);
+BError.prototype.constructor = BError;
+Object.assign(BError.prototype, definitions);

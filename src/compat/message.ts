@@ -43,7 +43,9 @@ export abstract class DisplayableError<M extends {}> extends BError<M> {
     protected [DisplayableErrorOpts]: DisplayableErrorOptions;
 }
 
-export const isDisplayableError = (error: any): error is DisplayableError<any> => !!error[DisplayableErrorOpts];
+export const isDisplayableError = (error: any): error is DisplayableError<any> => (
+    error && !!error[DisplayableErrorOpts]
+);
 
 export const displayError = (error: Error) => (
     ((isDisplayableError(error))

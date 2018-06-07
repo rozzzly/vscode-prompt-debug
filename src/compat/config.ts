@@ -25,8 +25,10 @@ export function getConfig(resource?: Uri): WorkspaceConfiguration {
 export let userConfigUri: Uri | null = null;
 
 
-export class DerivationError extends DisplayableError {
-    protected [DisplayableErrorOpts]: 
+export class DerivationError extends DisplayableError< {
+    protected [DisplayableErrorOpts]: {
+
+    }
     
     protected getMessage(): string {
         throw new Error('Method not implemented.');

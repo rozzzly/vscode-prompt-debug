@@ -7,6 +7,7 @@ import { Uri } from 'vscode';
 
 import { isWindows } from './compat';
 import { substitute, containsSubstitution } from './substitution';
+import { wrapDefault, wrapDefaultFunction } from './misc';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
@@ -90,21 +91,16 @@ export async function lastModified(filePath: Uri, suppressErrors: boolean = true
 }
 
 
-export function fileHash(resource: Uri): Promise<string | null>;
-export function fileHash(resource: Uri, suppressErrors: true): Promise<string | null>;
-export function fileHash(resource: Uri, suppressErrors: false): Promise<string>;
-export function fileHash(resource: Uri, suppressErrors: boolean): Promise<string | null>;
-export function fileHash(resource: Uri, suppressErrors: boolean = false): Promise<string | null> {
-    return new Promise<string | null>((resolve, reject) => {
+export function fileHash(resource: Uri): Promise<string>;
+export function fileHash(resource: Uri): Promise<string>;
+export function fileHash(resource: Uri): Promise<string>;
+export function fileHash(resource: Uri): Promise<string>;
+export function fileHash(resource: Uri): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath);
             stream.on('error', e => {
-                if (suppressErrors) {
-                    reject(e);
-                 } else {
-                    console.error(e);
-                    resolve(null);
-                }
+                reject(e);
             });
             const hash = crypto.createHash('md5').setEncoding('hex');
             hash.on('finish', () => {
@@ -115,12 +111,7 @@ export function fileHash(resource: Uri, suppressErrors: boolean = false): Promis
             });
             stream.pipe(hash);
         } catch (e) {
-            if (suppressErrors) {
-                console.error(e);
-                resolve(null);
-            } else {
-                reject(e);
-            }
+            reject(e);
         }
     });
 }
@@ -138,18 +129,12 @@ export async function fileExists(resource: Uri, suppressErrors: boolean = true):
     }
 }
 
-export async function dirExists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
-    if (suppressErrors) {
-        try {
-            return await dirExists(resource, false);
-        } catch (e) {
-            console.error({ e, resource });
-            return false;
-        }
-    } else {
-        return (await fs.statAsync(resource.fsPath)).isDirectory();
-    }
+async function dirExistsUnsafe(resource: Uri): Promise<boolean> {
+    return (await fs.statAsync(resource.fsPath)).isDirectory();
 }
+
+export const dirExists = wrapDefaultFunction(dirExistsUnsafe, false);
+
 
 export async function exists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
     if (suppressErrors) {

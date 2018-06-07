@@ -1,5 +1,30 @@
 import { BError } from './compat/BError';
 
+export type AsyncFunctionWithDefault<D, F> = (
+    (F extends (arg0: infer A0) => Promise<infer P>
+        ? (arg0: A0) => Promise<P | D>
+        : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
+            ? (arg0: A0, arg1: A1) => Promise<P | D>
+            : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
+                ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
+                : (F extends (...args: (infer A)[]) => Promise<infer P>
+                    ? (...args: A[]) => Promise<P | D>
+                    : never
+                )
+    )
+);
+
+export const wrapDefaultFunction = <F extends (...args: any[]) => Promise<any>, D, R = any>(
+    asyncFunc: F,
+    defaultValue: D,
+    callback: ((reason: Rejection<R>) => void) = console.warn
+): AsyncFunctionWithDefault<D, F> => (
+    (...args: any[]) => wrapDefault(
+        asyncFunc(...args), defaultValue, callback
+    )
+) as any;
+
+
 export const wrapDefault = <T, D, R = any>(
     promise: Promise<T>,
     defaultValue: D,
