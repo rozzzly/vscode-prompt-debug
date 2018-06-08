@@ -134,8 +134,8 @@ export const exists: (resource: Uri) => Promise<boolean> = (
     ), false)
 );
 
-export const readFile: (resource: Uri) => Promise<string> = (
-    wrapDefaultFunction(async (resource: Uri): Promise<string | null> => (
+export const readFile: (resource: Uri) => Promise<string | null> = (
+    wrapDefault(async (resource: Uri): Promise<string> => (
         fs.readFileAsync(resource.fsPath, {})
     ), null)
 }

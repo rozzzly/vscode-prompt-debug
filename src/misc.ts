@@ -3,54 +3,56 @@ import { BError, WrappedBError } from './compat/BError';
 export type UntypedAsyncFunction<P = any> = (...args: any[]) => Promise<P>;
 
 export type AsyncFunctionWithDefault<F, D> = (
-    (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
-        ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
-        : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
-            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
-            : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
-                ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
-                : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
-                    ? (arg0: A0, arg1: A1) => Promise<P | D>
-                    : (F extends (arg0: infer A0) => Promise<infer P>
-                        ? (arg0: A0) => Promise<P | D>
-                        : (F extends () => Promise<infer P>
-                            ? () => Promise<P | D>
-                            : (F extends (...args: (infer AN)[]) => Promise<infer P>
-                                ? (...args: AN[]) => Promise<P | D>
-                                : never
+    (F extends (...args: (infer AN)[]) => Promise<infer P>
+        ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
+            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
+            : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
+                ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
+                : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
+                    ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
+                    : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
+                        ? (arg0: A0, arg1: A1) => Promise<P | D>
+                        : (F extends (arg0: infer A0) => Promise<infer P>
+                            ? (arg0: A0) => Promise<P | D>
+                            : ( F extends () => Promise<infer P>
+                                ? () => Promise<P | D>
+                                : (...args: AN[]) => Promise<P | D>
                             )
                         )
                     )
                 )
             )
         )
+        : never
     )
 );
 
+export type Derp<R, A0 = never, A1 = never, A2 = never, A3 = never, A4 = never, AN = never> = (
+    A0 extends never
+        ? () => R
+        : A1 extends never
+            ? (arg: 0) => A1
+            : never
+)
+
 export type AsyncFunctionWithDefault1<F, D> = (
     (F extends () => Promise<infer P>
-        ? () => Promise<P | D>
-        : (F extends (arg0: infer A0) => Promise<infer P>
-            ? (arg0: A0) => Promise<P | D>
-            : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
-                ? (arg0: A0, arg1: A1) => Promise<P | D>
-                : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
-                    ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
-                    : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
-                        ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
-                        : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
+        ? (F extends (arg0: infer A0) => Promise<infer P>
+            ? (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
+                ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
+                    ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
+                        ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
                             ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
-                            : (F extends (...args: (infer AN)[]) => Promise<infer P>
-                                ? (...args: AN[]) => Promise<P | D>
-                                : never
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    )
+                            : never
+                        ) : (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
+                    ) : (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
+                ) : (arg0: A0, arg1: A1) => Promise<P | D>
+            ) : (arg0: A0) => Promise<P | D>
+        ) : () => 
+    
+)
 );
+// ? (F extends (...args: (infer AN)[]) => Promise<infer P>
 
 export type RejectionListener<R = any> = (
     | undefined
