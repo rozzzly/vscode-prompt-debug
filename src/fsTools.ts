@@ -7,7 +7,7 @@ import { Uri } from 'vscode';
 
 import { isWindows } from './compat';
 import { substitute, containsSubstitution } from './substitution';
-import { wrapDefault, wrapDefaultFunction } from './misc';
+import { wrapDefault } from './misc';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
@@ -90,12 +90,7 @@ export async function lastModified(filePath: Uri, suppressErrors: boolean = true
     return (await fs.statAsync(filePath.fsPath)).mtimeMs;
 }
 
-
-export function fileHash(resource: Uri): Promise<string>;
-export function fileHash(resource: Uri): Promise<string>;
-export function fileHash(resource: Uri): Promise<string>;
-export function fileHash(resource: Uri): Promise<string>;
-export function fileHash(resource: Uri): Promise<string> {
+export function fileHashUnsafe(resource: Uri): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath);
@@ -116,53 +111,33 @@ export function fileHash(resource: Uri): Promise<string> {
     });
 }
 
-export async function fileExists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
-    if (suppressErrors) {
-        try {
-            return await fileExists(resource, false);
-        } catch (e) {
-            console.error({ e, resource });
-            return false;
-        }
-    } else {
-        return (await fs.statAsync(resource.fsPath)).isFile();
-    }
-}
+export const fileHash: (resource: Uri) => Promise<string | null> = (
+    wrapDefault(fileHashUnsafe, null)
+);
 
-async function dirExistsUnsafe(resource: Uri): Promise<boolean> {
-    return (await fs.statAsync(resource.fsPath)).isDirectory();
-}
+export const fileExists: (resource: Uri) => Promise<boolean> = (
+    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+        (await fs.statAsync(resource.fsPath)).isFile()
+    ), false)
+);
 
-export const dirExists = wrapDefaultFunction(dirExistsUnsafe, false);
+export const dirExists: (resource: Uri) => Promise<boolean> = (
+    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+        (await fs.statAsync(resource.fsPath)).isDirectory()
+    ), false)
+);
 
 
-export async function exists(resource: Uri, suppressErrors: boolean = true): Promise<boolean> {
-    if (suppressErrors) {
-        try {
-            return await exists(resource, false);
-        } catch (e) {
-            console.error({ e, resource });
-            return false;
-        }
-    } else {
-        return !!await fs.statAsync(resource.fsPath);
-    }
-}
+export const exists: (resource: Uri) => Promise<boolean> = (
+    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+        !!(await fs.statAsync(resource.fsPath))
+    ), false)
+);
 
-export async function readFile(resource: Uri): Promise<string | null>;
-export async function readFile(resource: Uri, suppressErrors: true): Promise<string | null>;
-export async function readFile(resource: Uri, suppressErrors: false): Promise<string>;
-export async function readFile(resource: Uri, suppressErrors: boolean = true): Promise<string | null> {
-    if (suppressErrors) {
-        try {
-            return await readFile(resource, false);
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
-    } else {
-        return (await fs.readFileAsync(resource.fsPath)).toString();
-    }
+export const readFile: (resource: Uri) => Promise<string> = (
+    wrapDefaultFunction(async (resource: Uri): Promise<string | null> => (
+        fs.readFileAsync(resource.fsPath, {})
+    ), null)
 }
 
 

@@ -1,42 +1,124 @@
-import { BError } from './compat/BError';
+import { BError, WrappedBError } from './compat/BError';
 
-export type AsyncFunctionWithDefault<D, F> = (
-    (F extends (arg0: infer A0) => Promise<infer P>
-        ? (arg0: A0) => Promise<P | D>
-        : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
-            ? (arg0: A0, arg1: A1) => Promise<P | D>
+export type UntypedAsyncFunction<P = any> = (...args: any[]) => Promise<P>;
+
+export type AsyncFunctionWithDefault<F, D> = (
+    (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
+        ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
+        : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
+            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
             : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
                 ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
-                : (F extends (...args: (infer A)[]) => Promise<infer P>
-                    ? (...args: A[]) => Promise<P | D>
-                    : never
+                : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
+                    ? (arg0: A0, arg1: A1) => Promise<P | D>
+                    : (F extends (arg0: infer A0) => Promise<infer P>
+                        ? (arg0: A0) => Promise<P | D>
+                        : (F extends () => Promise<infer P>
+                            ? () => Promise<P | D>
+                            : (F extends (...args: (infer AN)[]) => Promise<infer P>
+                                ? (...args: AN[]) => Promise<P | D>
+                                : never
+                            )
+                        )
+                    )
                 )
+            )
+        )
     )
 );
 
-export const wrapDefaultFunction = <F extends (...args: any[]) => Promise<any>, D, R = any>(
-    asyncFunc: F,
-    defaultValue: D,
-    callback: ((reason: Rejection<R>) => void) = console.warn
-): AsyncFunctionWithDefault<D, F> => (
-    (...args: any[]) => wrapDefault(
-        asyncFunc(...args), defaultValue, callback
+export type AsyncFunctionWithDefault1<F, D> = (
+    (F extends () => Promise<infer P>
+        ? () => Promise<P | D>
+        : (F extends (arg0: infer A0) => Promise<infer P>
+            ? (arg0: A0) => Promise<P | D>
+            : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
+                ? (arg0: A0, arg1: A1) => Promise<P | D>
+                : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
+                    ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
+                    : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
+                        ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
+                        : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
+                            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
+                            : (F extends (...args: (infer AN)[]) => Promise<infer P>
+                                ? (...args: AN[]) => Promise<P | D>
+                                : never
+                            )
+                        )
+                    )
+                )
+            )
+        )
     )
-) as any;
+);
 
+export type RejectionListener<R = any> = (
+    | undefined
+    | ((reason: Rejection<R>) => void)
+);
 
-export const wrapDefault = <T, D, R = any>(
-    promise: Promise<T>,
+export type RejectionWrapper<W extends { origin: Error } = { origin: Error }> = (
+    | undefined
+    | Constructor<WrappedBError<W>>
+);
+
+export interface WrapDefault {
+    <P, D>(
+        promise: Promise<P>,
+        defaultValue: D,
+    ): Promise<P | D>;
+    <P, D, R = any>(
+        promise: Promise<P>,
+        defaultValue: D,
+        callback?: RejectionListener<R>
+    ): Promise<P | D>;
+    <P, D, W extends { origin: Error } = { origin: Error }>(
+        promise: Promise<P>,
+        defaultValue: D,
+        callback?: RejectionListener<W>,
+        rejectionWrapper?: RejectionWrapper<W>
+    ): Promise<P | D>;
+    <F extends UntypedAsyncFunction, D>(
+        asyncFunc: F,
+        defaultValue: D,
+    ): AsyncFunctionWithDefault<F, D>;
+    <F extends UntypedAsyncFunction, D, R = any>(
+        asyncFunc: F,
+        defaultValue: D,
+        callback: RejectionListener<R>
+    ): AsyncFunctionWithDefault<F, D>;
+    <F extends UntypedAsyncFunction, D, W extends { origin: Error } = { origin: Error }>(
+        asyncFunc: F,
+        defaultValue: D,
+        callback: RejectionListener<W>,
+        rejectionWrapper: RejectionWrapper<W>
+    ): AsyncFunctionWithDefault<F, D>;
+}
+
+export const wrapDefault: WrapDefault = <P, D>(
+    operation: Promise<P> | UntypedAsyncFunction<P>,
     defaultValue: D,
-    callback: ((reason: Rejection<R>) => void) = console.warn
-): Promise<T | D> => ((wrapRejection(promise, callback))
-    .then(ret => {
-        if (isRejection(ret)) {
-            return defaultValue;
-        } else {
-            return ret;
-        }
-    })
+    callback: RejectionListener = console.warn,
+    rejectionWrapper?: RejectionWrapper
+): any  => (
+    ((typeof operation === 'function')
+        ? (...args: any[]) => (
+            wrapDefault(
+                operation(...args),
+                defaultValue,
+                callback,
+                rejectionWrapper
+            )
+         ) : ((operation)
+            .then(ret => {
+                if (isRejection(ret)) {
+                    return defaultValue;
+                } else {
+                    return ret;
+                }
+            })
+        )
+    )
 );
 
 
@@ -73,9 +155,13 @@ export type Rejection<T> = (
     )
 );
 
-export function rejectify<T>(value: T): Rejection<T>;
+export type Constructor<I = any> = new (...args: any[]) => I;
+export type Instance<C extends Constructor> = C extends new (...args: any[]) => infer I ? I : never;
+
+export function rejectify<T>(value: T, errorWrapper?: RejectionWrapper): Rejection<T>;
 export function rejectify<T extends Primitive>(value: T): Rejection<T>;
-export function rejectify(value: any): Rejection<any> {
+export function rejectify<E extends Error, B extends Constructor<WrappedBError<any>>>(value: E, errorClass: B): B;
+export function rejectify(value: any, errorWrapper?: RejectionWrapper): Rejection<any> {
     if (isRejection(value)) {
         return value as any;
     } else {
@@ -85,6 +171,8 @@ export function rejectify(value: any): Rejection<any> {
                 [PRIMITIVE_REJECTION]: true,
                 reason: value
             };
+        } else if (value instanceof Error && errorWrapper) {
+            return new errorWrapper({ origin: value });
         } else {
             value[REJECTABLE] = true;
             if (value[REJECTABLE] === true) {
@@ -116,13 +204,14 @@ const isExoticRejection = (value: any): value is PrimitiveRejection<any> => (
     isRejection(value) && !(value as any)[PRIMITIVE_REJECTION]
 );
 
-export const wrapRejection = <P, T>(
+export const returnRejection = <P, R, W extends Constructor<WrappedBError<any>>>(
     promise: Promise<P>,
-    logCallback: ((reason: Rejection<T>) => void) = console.warn
-): Promise<P | Rejection<T>> => ((promise)
-    .catch((e: T) => {
-        const rejection = rejectify(e);
-        logCallback(rejection);
+    callback: RejectionListener<R> = console.warn,
+    rejectionWrapper?: RejectionWrapper
+): Promise<P | Rejection<R>> => ((promise)
+    .catch((e: any) => {
+        const rejection = rejectify(e, rejectionWrapper);
+        if (callback) callback(rejection);
         return rejection;
     })
 );
@@ -144,25 +233,24 @@ export const predicateRace = <T, R>(
     promises: Promise<T>[],
     predicate: ((v: T) => boolean),
     suppressRejections: boolean = true,
-    logCallback: ((reason: Rejection<R>) => void) = console.warn
+    callback: RejectionListener<R> = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
         if (suppressRejections) {
-            Promise.all(promises.map(promise => ((promise)
+            Promise.all(promises.map(promise => (
+                returnRejection(promise, callback)
                 .then(v => {
-                    if (predicate(v)) {
+                    if (!isRejection(v) && predicate(v)) {
                         resolved = true;
                         resolve(v);
                     }
                 })
-                .catch(e => {
-                    logCallback(rejectify(e));
-                })
-            ))).then(() => {
+                )
+            )).then(() => {
                 if (!resolved) {
-                    throw new UnresolvedRaceError({ promises, predicate });
-                }
+                    reject(new UnresolvedRaceError({ promises, predicate }));
+                } // else (already resolved)
             });
         } else {
             Promise.all(promises.map(promise => ((promise)
@@ -174,7 +262,7 @@ export const predicateRace = <T, R>(
                 })
             ))).then(() => {
                 if (!resolved) {
-                    throw new UnresolvedRaceError({ promises, predicate });
+                    reject(new UnresolvedRaceError({ promises, predicate }));
                 }
             });
         }
@@ -184,17 +272,17 @@ export const predicateRace = <T, R>(
 
 export const rejectionRace = <T, R>(
     promises: Promise<T>[],
-    logCallback: ((reason: Rejection<R>) => void) = console.warn
+    callback: RejectionListener = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
-        Promise.all(promises.map(promise => ((promise)
+        Promise.all(promises.map(promise => (
+            returnRejection(promise, callback)
             .then(v => {
-                resolved = true;
-                resolve(v);
-            })
-            .catch(e => {
-                logCallback(e);
+                if (!isRejection(v)) {
+                    resolved = true;
+                    resolve(v);
+                }
             })
         ))).then(() => {
             if (!resolved) {
