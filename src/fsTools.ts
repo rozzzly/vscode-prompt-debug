@@ -7,7 +7,7 @@ import { Uri } from 'vscode';
 
 import { isWindows } from './compat';
 import { substitute, containsSubstitution } from './substitution';
-import { wrapDefault } from './misc';
+import { wrapDefault, makeSafe } from './misc';
 
 export const homeDirPath: string = homedir();
 export const homeDirUri: Uri = Uri.file(homeDirPath);
@@ -90,8 +90,8 @@ export async function lastModified(filePath: Uri, suppressErrors: boolean = true
     return (await fs.statAsync(filePath.fsPath)).mtimeMs;
 }
 
-export function fileHashUnsafe(resource: Uri): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
+export const fileHash = makeSafe(async (resource: Uri): Promise<string> => (
+    new Promise<string>((resolve, reject) => {
         try {
             const stream = fs.createReadStream(resource.fsPath);
             stream.on('error', e => {
@@ -108,37 +108,32 @@ export function fileHashUnsafe(resource: Uri): Promise<string> {
         } catch (e) {
             reject(e);
         }
-    });
-}
+    })
+), null);
 
-export const fileHash: (resource: Uri) => Promise<string | null> = (
-    wrapDefault(fileHashUnsafe, null)
-);
 
 export const fileExists: (resource: Uri) => Promise<boolean> = (
-    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+    wrapDefault(async (resource: Uri): Promise<boolean> => (
         (await fs.statAsync(resource.fsPath)).isFile()
     ), false)
 );
 
 export const dirExists: (resource: Uri) => Promise<boolean> = (
-    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+    wrapDefault(async (resource: Uri): Promise<boolean> => (
         (await fs.statAsync(resource.fsPath)).isDirectory()
     ), false)
 );
 
 
 export const exists: (resource: Uri) => Promise<boolean> = (
-    wrapDefaultFunction(async (resource: Uri): Promise<boolean> => (
+    wrapDefault(async (resource: Uri): Promise<boolean> => (
         !!(await fs.statAsync(resource.fsPath))
     ), false)
 );
 
-export const readFile: (resource: Uri) => Promise<string | null> = (
-    wrapDefault(async (resource: Uri): Promise<string> => (
-        fs.readFileAsync(resource.fsPath, {})
-    ), null)
-}
+export const readFile = makeSafe(async (resource: Uri): Promise<string> => (
+    fs.readFileAsync(resource.fsPath, {})
+), null);
 
 
 export function isDescendent(resource: Uri, base: Uri): boolean {

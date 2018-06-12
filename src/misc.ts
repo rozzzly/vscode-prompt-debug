@@ -2,57 +2,60 @@ import { BError, WrappedBError } from './compat/BError';
 
 export type UntypedAsyncFunction<P = any> = (...args: any[]) => Promise<P>;
 
-export type AsyncFunctionWithDefault<F, D> = (
-    (F extends (...args: (infer AN)[]) => Promise<infer P>
-        ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
-            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
-            : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
-                ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
-                : (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
-                    ? (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
-                    : (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
-                        ? (arg0: A0, arg1: A1) => Promise<P | D>
-                        : (F extends (arg0: infer A0) => Promise<infer P>
-                            ? (arg0: A0) => Promise<P | D>
-                            : ( F extends () => Promise<infer P>
-                                ? () => Promise<P | D>
-                                : (...args: AN[]) => Promise<P | D>
+export type AsyncFunctionWithDefault<Fn, DefaultValue> = (
+    (Fn extends () => Promise<infer T>
+        ? () => Promise<T | DefaultValue>
+        : (Fn extends (a: infer A) => Promise<infer T>
+            ? (a: A) => Promise<T | DefaultValue>
+            : (Fn extends (a: infer A, b: infer B) => Promise<infer T>
+                ? (a: A, b: B) => Promise<T | DefaultValue>
+                : (Fn extends (a: infer A, b: infer B, C: infer C) => Promise<infer T>
+                    ? (a: A, b: B, c: C) => Promise<T | DefaultValue>
+                    : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D) => Promise<infer T>
+                        ? (a: A, b: B, c: C, d: D) => Promise<T | DefaultValue>
+                        : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E) => Promise<infer T>
+                            ? (a: A, b: B, c: C, d: D, e: E) => Promise<T | DefaultValue>
+                            : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E, f: infer F) => Promise<infer T>
+                                ? (a: A, b: B, c: C, d: D, e: E, f: F) => Promise<T | DefaultValue>
+                                : (Fn extends (...n: (infer N)[]) => Promise<infer T>
+                                    ? (...n: N[]) => Promise<T | DefaultValue>
+                                    : never
+                                )
                             )
                         )
                     )
                 )
             )
         )
-        : never
     )
 );
-
-export type Derp<R, A0 = never, A1 = never, A2 = never, A3 = never, A4 = never, AN = never> = (
-    A0 extends never
-        ? () => R
-        : A1 extends never
-            ? (arg: 0) => A1
-            : never
-)
-
-export type AsyncFunctionWithDefault1<F, D> = (
-    (F extends () => Promise<infer P>
-        ? (F extends (arg0: infer A0) => Promise<infer P>
-            ? (F extends (arg0: infer A0, arg1: infer A1) => Promise<infer P>
-                ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2) => Promise<infer P>
-                    ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3) => Promise<infer P>
-                        ? (F extends (arg0: infer A0, arg1: infer A1, arg2: infer A2, arg3: infer A3, arg4: infer A4) => Promise<infer P>
-                            ? (arg0: A0, arg1: A1, arg2: A2, arg3: A3, arg4: A4) => Promise<P | D>
-                            : never
-                        ) : (arg0: A0, arg1: A1, arg2: A2, arg3: A3) => Promise<P | D>
-                    ) : (arg0: A0, arg1: A1, arg2: A2) => Promise<P | D>
-                ) : (arg0: A0, arg1: A1) => Promise<P | D>
-            ) : (arg0: A0) => Promise<P | D>
-        ) : () => 
-    
-)
+export type FunctionWithDefault<Fn, DefaultValue> = (
+    (Fn extends () => infer T
+        ? () => T | DefaultValue
+        : (Fn extends (a: infer A) => infer T
+            ? (a: A) => T | DefaultValue
+            : (Fn extends (a: infer A, b: infer B) => infer T
+                ? (a: A, b: B) => T | DefaultValue
+                : (Fn extends (a: infer A, b: infer B, C: infer C) => infer T
+                    ? (a: A, b: B, c: C) => T | DefaultValue
+                    : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D) => infer T
+                        ? (a: A, b: B, c: C, d: D) => T | DefaultValue
+                        : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E) => infer T
+                            ? (a: A, b: B, c: C, d: D, e: E) => T | DefaultValue
+                            : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E, f: infer F) => infer T
+                                ? (a: A, b: B, c: C, d: D, e: E, f: F) => T | DefaultValue
+                                : (Fn extends (...n: (infer N)[]) => infer T
+                                    ? (...n: N[]) => T | DefaultValue
+                                    : never
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
 );
-// ? (F extends (...args: (infer AN)[]) => Promise<infer P>
 
 export type RejectionListener<R = any> = (
     | undefined
@@ -97,31 +100,65 @@ export interface WrapDefault {
     ): AsyncFunctionWithDefault<F, D>;
 }
 
+export interface CustomSafeAsyncFunc<F extends UntypedAsyncFunction> {
+    <D>(
+        defaultValue: D,
+    ): AsyncFunctionWithDefault<F, D>;
+    <D, R = any>(
+        defaultValue: D,
+        callback: RejectionListener<R>
+    ): AsyncFunctionWithDefault<F, D>;
+    <D, W extends { origin: Error } = { origin: Error }>(
+        defaultValue: D,
+        callback: RejectionListener<W>,
+        rejectionWrapper: RejectionWrapper<W>
+    ): AsyncFunctionWithDefault<F, D>;
+}
+
+export type SafeAsyncFunction<F extends UntypedAsyncFunction, D> = (
+    & F
+    & {
+        safe: AsyncFunctionWithDefault<F, D>;
+        safeCustom: CustomSafeAsyncFunc<F>;
+    }
+);
+export function makeSafe<F extends UntypedAsyncFunction, D>(
+    unsafe: F,
+    defaultValue: D
+): SafeAsyncFunction<F, D> {
+    const ret: SafeAsyncFunction<F, D> = unsafe as any;
+    ret.safe = wrapDefault(unsafe, defaultValue);
+    ret.safeCustom = ((customDefault: any, callback: any, rejectionWrapper: any) => (
+        wrapDefault(unsafe, customDefault, callback, rejectionWrapper)
+    )) as any;
+    return ret;
+}
+
 export const wrapDefault: WrapDefault = <P, D>(
     operation: Promise<P> | UntypedAsyncFunction<P>,
     defaultValue: D,
     callback: RejectionListener = console.warn,
     rejectionWrapper?: RejectionWrapper
-): any  => (
-    ((typeof operation === 'function')
-        ? (...args: any[]) => (
-            wrapDefault(
-                operation(...args),
-                defaultValue,
-                callback,
-                rejectionWrapper
+): any => (
+        ((typeof operation === 'function')
+            ? (...args: any[]) => (
+                wrapDefault(
+                    operation(...args),
+                    defaultValue,
+                    callback,
+                    rejectionWrapper
+                )
+            ) : ((operation)
+                .then(ret => {
+                    if (isRejection(ret)) {
+                        return defaultValue;
+                    } else {
+                        return ret;
+                    }
+                })
             )
-         ) : ((operation)
-            .then(ret => {
-                if (isRejection(ret)) {
-                    return defaultValue;
-                } else {
-                    return ret;
-                }
-            })
         )
-    )
-);
+    );
 
 
 export const REJECTABLE: unique symbol = Symbol('RuntimeHint/REJECTABLE'); /// TODO ::: namespace this
@@ -242,13 +279,13 @@ export const predicateRace = <T, R>(
         if (suppressRejections) {
             Promise.all(promises.map(promise => (
                 returnRejection(promise, callback)
-                .then(v => {
-                    if (!isRejection(v) && predicate(v)) {
-                        resolved = true;
-                        resolve(v);
-                    }
-                })
-                )
+                    .then(v => {
+                        if (!isRejection(v) && predicate(v)) {
+                            resolved = true;
+                            resolve(v);
+                        }
+                    })
+            )
             )).then(() => {
                 if (!resolved) {
                     reject(new UnresolvedRaceError({ promises, predicate }));
@@ -280,12 +317,12 @@ export const rejectionRace = <T, R>(
         let resolved: boolean = false;
         Promise.all(promises.map(promise => (
             returnRejection(promise, callback)
-            .then(v => {
-                if (!isRejection(v)) {
-                    resolved = true;
-                    resolve(v);
-                }
-            })
+                .then(v => {
+                    if (!isRejection(v)) {
+                        resolved = true;
+                        resolve(v);
+                    }
+                })
         ))).then(() => {
             if (!resolved) {
                 reject(new UnresolvedRaceError({

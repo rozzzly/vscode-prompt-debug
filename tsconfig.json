@@ -20,10 +20,10 @@
     "rootDir": ".",
     "outDir": "out",
     "strictNullChecks": true,
-    "typeRoots": [
-      "node_modules/@types",
-      "type-stubs"
-    ]
+    // "typeRoots": [
+    //   "node_modules/@types",
+    //   "type-stubs"
+    // ]
   },
   "exclude": [
     "node_modules",
