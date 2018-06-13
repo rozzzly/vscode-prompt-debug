@@ -80,11 +80,7 @@ export async function findUserConfig(context: ExtensionContext): Promise<Uri> {
 
 export interface ConfigLookupErrorMeta {
     key: string;
-    cfg: {
-        uri: Uri;
-        content: string
-        parsed: object;
-    };
+    config: object;
 }
 
 export class ConfigLookupError extends DisplayableError<ConfigLookupErrorMeta> {
@@ -93,51 +89,9 @@ export class ConfigLookupError extends DisplayableError<ConfigLookupErrorMeta> {
         modal: false
     };
     protected getMessage(): string {
-        return 'could not find key';
+        return `Could not find key '${this.meta.key}' in from the config.`;
     }
 }
-
-// export function objLookup<T>(config: object, key: string): T | never;
-// export function objLookup<T, D>(config: object, key: string, defaultValue: D): T | D;
-// export function objLookup<T, D>(config: object, key: string, defaultValue: D = NO_ARG as any as D): T | D | NO_RESULT | never {
-//     let node: any = config;
-//     let allParts = key.split('.');
-//     let parts: string[] = [...allParts]; // x.y.z => x, y, z
-//     let unusedParts: string[] = [];
-//     let selectedKeys: string[] = [];
-//     while (true) {
-//         const keys = Object.keys(node);
-//         const joined = parts.join('.');
-//         if (keys.includes(joined)) {
-//             selectedKeys.push(joined);
-//             if (unusedParts.length) { // desired node not-yet reached
-//                 node = node[joined];
-//                 if (isPlainObject(node[joined])) { // node is non-terminal (possible to traverse deeper)
-//                     parts = [...unusedParts];
-//                     unusedParts = [];
-//                     return node;
-//                 } else {
-//                     throw new ConfigLookupError({ key, cfg: undefined } );
-//                 }
-//             } else { // desired node reached, return it's value
-//                 if (isPlainObject(node[joined])) {
-//                     objLookup(node[joined], joined)
-//                 }
-//                 return node[joined];
-//             }
-//         } else if (parts.length > 1) {
-//             // given: x, y, z
-//             const left = parts.slice(0, -1); // x, y
-//             const right = parts.slice(-1); // z
-//             unusedParts = [...right, ...unusedParts];
-//             parts = [...left]; // will have 1 or more items
-//         } else {
-//             if (defaultValue !== NO_ARG) return defaultValue;
-//             else return NO_RESULT; /// TODO ::: change behavior to throw in this case
-//         }
-//     }
-// }
-
 export function objLookup<T = any>(config: object, key: string): T | never;
 export function objLookup<T = any, D = any>(config: object, key: string, defaultValue: D): T | D;
 export function objLookup<T = any, D = any>(config: object, key: string, defaultValue: D = NO_ARG as any): T | D | never {
@@ -170,7 +124,10 @@ export function objLookup<T = any, D = any>(config: object, key: string, default
     // parts cannot be separated any further (ie: we are at root)
     if ((defaultValue as any) !== NO_ARG) return defaultValue;
     else {
-        throw New
+        throw new ConfigLookupError({
+            key,
+            config
+        });
     }
 }
 

@@ -1,8 +1,8 @@
 import { BError, WrappedBError } from './compat/BError';
 
-export type UntypedAsyncFunction<P = any> = (...args: any[]) => Promise<P>;
+export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
 
-export type AsyncFunctionWithDefault<Fn, DefaultValue> = (
+export type AsyncFnWithDefault<Fn, DefaultValue> = (
     (Fn extends () => Promise<infer T>
         ? () => Promise<T | DefaultValue>
         : (Fn extends (a: infer A) => Promise<infer T>
@@ -29,7 +29,7 @@ export type AsyncFunctionWithDefault<Fn, DefaultValue> = (
         )
     )
 );
-export type FunctionWithDefault<Fn, DefaultValue> = (
+export type FnWithDefault<Fn, DefaultValue> = (
     (Fn extends () => infer T
         ? () => T | DefaultValue
         : (Fn extends (a: infer A) => infer T
@@ -83,82 +83,90 @@ export interface WrapDefault {
         callback?: RejectionListener<W>,
         rejectionWrapper?: RejectionWrapper<W>
     ): Promise<P | D>;
-    <F extends UntypedAsyncFunction, D>(
+    <F extends AsyncFn, D>(
         asyncFunc: F,
         defaultValue: D,
-    ): AsyncFunctionWithDefault<F, D>;
-    <F extends UntypedAsyncFunction, D, R = any>(
+    ): AsyncFnWithDefault<F, D>;
+    <F extends AsyncFn, D, R = any>(
         asyncFunc: F,
         defaultValue: D,
         callback: RejectionListener<R>
-    ): AsyncFunctionWithDefault<F, D>;
-    <F extends UntypedAsyncFunction, D, W extends { origin: Error } = { origin: Error }>(
+    ): AsyncFnWithDefault<F, D>;
+    <F extends AsyncFn, D, W extends { origin: Error } = { origin: Error }>(
         asyncFunc: F,
         defaultValue: D,
         callback: RejectionListener<W>,
         rejectionWrapper: RejectionWrapper<W>
-    ): AsyncFunctionWithDefault<F, D>;
+    ): AsyncFnWithDefault<F, D>;
 }
 
-export interface CustomSafeAsyncFunc<F extends UntypedAsyncFunction> {
-    <D>(
-        defaultValue: D,
-    ): AsyncFunctionWithDefault<F, D>;
-    <D, R = any>(
-        defaultValue: D,
+export interface CustomSafeAsyncFunc<Fn extends AsyncFn> {
+    <DefaultValue>(
+        defaultValue: DefaultValue,
+    ): AsyncFnWithDefault<Fn, DefaultValue>;
+    <DefaultValue, R = any>(
+        defaultValue: DefaultValue,
         callback: RejectionListener<R>
-    ): AsyncFunctionWithDefault<F, D>;
-    <D, W extends { origin: Error } = { origin: Error }>(
-        defaultValue: D,
+    ): AsyncFnWithDefault<Fn, DefaultValue>;
+    <DefaultValue, W extends { origin: Error } = { origin: Error }>(
+        defaultValue: DefaultValue,
         callback: RejectionListener<W>,
         rejectionWrapper: RejectionWrapper<W>
-    ): AsyncFunctionWithDefault<F, D>;
+    ): AsyncFnWithDefault<Fn, DefaultValue>;
 }
 
-export type SafeAsyncFunction<F extends UntypedAsyncFunction, D> = (
-    & F
+export type SafeAsyncFunction<
+    Fn extends AsyncFn,
+    DefaultValue,
+    SafeFn extends AsyncFnWithDefault<Fn, DefaultValue> = AsyncFnWithDefault<Fn, DefaultValue>
+> = (
+    & Fn
     & {
-        safe: AsyncFunctionWithDefault<F, D>;
-        safeCustom: CustomSafeAsyncFunc<F>;
+        safe: SafeFn;
+        safeCustom: CustomSafeAsyncFunc<Fn>;
     }
 );
-export function makeSafe<F extends UntypedAsyncFunction, D>(
-    unsafe: F,
-    defaultValue: D
-): SafeAsyncFunction<F, D> {
-    const ret: SafeAsyncFunction<F, D> = unsafe as any;
+export function makeSafe<
+    Fn extends AsyncFn,
+    DefaultValue,
+    SafeFn extends AsyncFnWithDefault<Fn, DefaultValue> = AsyncFnWithDefault<Fn, DefaultValue>
+>(
+    unsafe: Fn,
+    defaultValue: DefaultValue
+): SafeAsyncFunction<Fn, DefaultValue, SafeFn> {
+    const ret: any = unsafe;
     ret.safe = wrapDefault(unsafe, defaultValue);
-    ret.safeCustom = ((customDefault: any, callback: any, rejectionWrapper: any) => (
+    ret.safeCustom = (customDefault: any, callback: any, rejectionWrapper: any) => (
         wrapDefault(unsafe, customDefault, callback, rejectionWrapper)
-    )) as any;
+    );
     return ret;
 }
 
 export const wrapDefault: WrapDefault = <P, D>(
-    operation: Promise<P> | UntypedAsyncFunction<P>,
+    operation: Promise<P> | AsyncFn<P>,
     defaultValue: D,
     callback: RejectionListener = console.warn,
     rejectionWrapper?: RejectionWrapper
 ): any => (
-        ((typeof operation === 'function')
-            ? (...args: any[]) => (
-                wrapDefault(
-                    operation(...args),
-                    defaultValue,
-                    callback,
-                    rejectionWrapper
-                )
-            ) : ((operation)
-                .then(ret => {
-                    if (isRejection(ret)) {
-                        return defaultValue;
-                    } else {
-                        return ret;
-                    }
-                })
+    ((typeof operation === 'function')
+        ? (...args: any[]) => (
+            wrapDefault(
+                operation(...args),
+                defaultValue,
+                callback,
+                rejectionWrapper
             )
+        ) : ((operation)
+            .then(ret => {
+                if (isRejection(ret)) {
+                    return defaultValue;
+                } else {
+                    return ret;
+                }
+            })
         )
-    );
+    )
+);
 
 
 export const REJECTABLE: unique symbol = Symbol('RuntimeHint/REJECTABLE'); /// TODO ::: namespace this
