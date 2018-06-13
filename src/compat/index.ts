@@ -8,7 +8,8 @@ import {
     workspace,
     Selection,
     TextEditor,
-    WorkspaceFolder
+    WorkspaceFolder,
+    Position
 } from 'vscode';
 
 import { isDescendent, dirExists, fileExists, readFile, LooseUri, asPath } from '../fsTools';
@@ -125,6 +126,14 @@ export function getOpenFiles(onlyVisible: boolean = false): Uri[] {
     } else {
         return workspace.textDocuments.map(doc => doc.uri);
     }
+}
+
+export function getCursorPosition(): Position | null {
+    const selections = getSelections();
+    return ((selections.length)
+        ? selections[0].active
+        : null
+    );
 }
 
 export function getSelections(activeEditorOnly: boolean = false): Selection[] {
