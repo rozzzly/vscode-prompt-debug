@@ -1,5 +1,22 @@
 import { BError, WrappedBError } from './compat/BError';
 
+export type JSONified<T> = (
+    (T extends string | number | boolean | null 
+        ? T
+        : (T extends undefined | Function
+            ? undefined
+            : (T extends { toJSON(): infer R }
+                ? R
+                : (T extends object 
+                    ? JSONifiedObject<T>
+                    : never
+                )
+            )
+        )
+    )
+);
+type JSONifiedObject<T extends object> = { [K in keyof T]: JSONified<T[K]> };
+
 export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
 
 export type AsyncFnWithDefault<Fn, DefaultValue> = (

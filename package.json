@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "ajv": "^6.4.0",
+        "chalk": "^2.4.1",
         "decache": "^4.4.0",
         "fs-extra-promise": "^1.0.1",
         "json-6": "^1.0.2",
