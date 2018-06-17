@@ -15,6 +15,7 @@ export type JSONified<T> = (
         )
     )
 );
+
 type JSONifiedObject<T extends object> = { [K in keyof T]: JSONified<T[K]> };
 
 export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
@@ -286,7 +287,7 @@ export interface UnresolvedRaceErrorMeta {
 }
 export class UnresolvedRaceError extends BError<UnresolvedRaceErrorMeta> {
     protected getMessage(): string {
-        return ((this.meta.predicate)
+        return ((this.data.predicate)
             ? 'None of the supplied promises resolved successfully.'
             : 'None of the supplied promises resolved successfully and passed the predicate.'
         );

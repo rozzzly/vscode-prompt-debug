@@ -2,51 +2,6 @@ import * as chalk from 'chalk';
 
 import { types } from 'util';
 import { Rejectable, REJECTABLE } from '../misc';
-import { SemVer, Range as SemVerRange } from 'semver';
-export type prowess = typeof prowess;
-export const prowess: unique symbol = Symbol('prowess::skills');
-
-type ExtractSkillInterface<S extends Skill<any>> = (
-    (S extends Skill<infer I>
-        ? I
-        : never
-    )
-);
-
-interface NamedSkill<I, SkillName extends string> {
-    name: SkillName;
-    version: SemVer;
-    toString(): string;
-    hasSkill(value: any): value is I;
-}
-function mkSkill<I, SkillName extends string>: 
-interface RequiredSkill<S extends Skill<any>> {
-    name: S['name'];
-    namespace?: S['name'];
-    version: SemVerRange;
-    satisfies(value: any): value is ExtractSkillInterface<S>;
-}
-
-interface SkillSet(
-
-export const enum BErrorSeverity {
-    fatal,
-    warning,
-    notice,
-    info
-}
-
-export const ansiStyleRegex: RegExp = /(\u001b\[(?:\d+;)*\d+m)/u;
-export const stripAnsiEscapes = (str: string): string => (
-    str.split(ansiStyleRegex).reduce((reduction, part) => (
-        ((ansiStyleRegex.test(part))
-            ? reduction
-            : reduction + part
-        )
-    ), '')
-);
-
-type meta<M> = {} extends { [K in keyof M]: NonNullable<M> } ? true : false;
 
 
 export type ExportedBError<B extends BError<any>> = (
