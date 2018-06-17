@@ -3,7 +3,15 @@ import * as chalk from 'chalk';
 import { types } from 'util';
 import { Rejectable, REJECTABLE } from '../misc';
 
-
+export const ansiStyleRegex: RegExp = /(\u001b\[(?:\d+;)*\d+m)/u;
+export const stripAnsiEscapes = (str: string): string => (
+    str.split(ansiStyleRegex).reduce((reduction, part) => (
+        ((ansiStyleRegex.test(part))
+            ? reduction
+            : reduction + part
+        )
+    ), '')
+);
 export type ExportedBError<B extends BError<any>> = (
     (B['origin'] extends Error
         ? { origin: B['origin'] }
@@ -68,7 +76,7 @@ export abstract class BError<D extends {} = {}> extends Error implements Rejecta
             this.detailColor = this.detail;
             this.detail = stripAnsiEscapes(this.detail);
         } else {
-            this.detailColor = chalk.warn(this.detail)
+            this.detailColor = chalk.warn(this.detail);
         }
 
         
@@ -123,11 +131,3 @@ BError.prototype.constructor = BError;
 Object.assign(BError.prototype, definitions);
 
 
-
-class Foo<O extends Error> extends BError<O> {
-    public getMessage(): string {
-        return '';
-    }
-}
-const z = new Foo({});
-z.export()

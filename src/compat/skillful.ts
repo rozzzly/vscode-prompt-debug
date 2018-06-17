@@ -1,4 +1,5 @@
 import { SemVer, Range as SemVerRange } from 'semver';
+import { Constructor } from '../misc';
 
 export type skillful = typeof skillful;
 export const skillful: unique symbol = Symbol.for('@rozzzly/skillful');
@@ -18,42 +19,48 @@ type ExtractSkillInterface<S extends Skill> = (
     )
 );
 
+export function createNamedFunction<F extends Function>(name: string, func: F): F {
+    const wrapper = {
+        [name]: (...args: any[]) => func(...args)
+    };
+    return wrapper[name] as any;
+}
+
 export interface Skill<I extends {} = {}, H extends {} = {}, SkillName extends string = string> {
     name: SkillName;
     version: SemVer;
     prerequisites: PrerequisiteSkill<any>[];
     toString(): string;
     getHandle<B extends I>(value: B): H;
-    can<B>(value: B): value is (B & I);
     teach<B>(value: B): value is (B & I);
     teach<B>(value: B, force: boolean): value is (B & I);
     teach<B>(value: B, force?: boolean): value is (B & I);
 }
 
 export const nominalMentor = <T, I extends {} = {}>(student: T): (T & I) => student as any;
-export function defineSkill<SkillName extends string, H extends {}, I extends {} = {}>(
+export function defineSkill<I extends {}, SkillName extends string, H extends {} = {}>(
     name: SkillName,
     version: SemVer | string,
 ): Skill<I, H, SkillName>;
-export function defineSkill<SkillName extends string, H extends {}, I extends {} = {}>(
+export function defineSkill<I extends {}, H extends {}, SkillName extends string>(
     name: SkillName,
     version: SemVer | string,
     defineHandle: <V>(value: V) => H
 ): Skill<I, H, SkillName>;
-export function defineSkill<SkillName extends string, H extends {}, I extends {} = {}>(
+export function defineSkill<I extends {}, H extends {}, SkillName extends string>(
     name: SkillName,
     version: SemVer | string,
     defineHandle: <V>(value: V) => H,
     mentor: <V>(student: V) => V & I
 ): Skill<I, H, SkillName>;
-export function defineSkill<SkillName extends string, H extends {}, I extends {} = {}>(
+export function defineSkill<I extends {}, H extends {}, SkillName extends string>(
     name: SkillName,
     version: SemVer | string,
     defineHandle: <V>(value: V) => H,
     mentor: <V>(student: V) => V & I,
     prerequisites: SkillRequirement[]
 ): Skill<I, H, SkillName>;
-export function defineSkill<SkillName extends string, H extends {}, I extends {} = {}>(
+export function defineSkill<I extends {}, H extends {}, SkillName extends string>(
     name: SkillName,
     version: SemVer | string = '0.0.0',
     defineHandle: <V>(value: V) => H = (value): H => ({} as H),
@@ -68,22 +75,44 @@ export function defineSkill<SkillName extends string, H extends {}, I extends {}
         toString(): string {
             return `${name}@${version.toString()}`;
         },
-        can<B>(value: B): value is (B & I) {
-            return false;
-        },
+        getHandle(value: any): H {
+            
+        }
         teach<B>(value: B, force: boolean = false): value is (B & I) {
+            if (value[skillful]) {
+
+            }
             return false;
         }
 
     };
 }
-export interface PrerequisiteSkill<S extends Skill<any, any>> {
-    name: S['name'];
-    version: SemVerRange;
-    satisfies(value: any): value is ExtractSkillInterface<S>;
+
+export function teach<S extends Skill<any, any>, B extends {}>(skill: S, value: B): B & ExtractSkillInterface<S>;
+export function teach<S extends Skill<any, any>, B extends {}>(skill: S, value: B, force: boolean): B & ExtractSkillInterface<S>;
+export function teach<S extends Skill<any, any>, B extends {}>(skill: S, value: B, force: boolean = false): B & ExtractSkillInterface<S> {
+    const target: any = value;
+    if (!target[skillful] || !Array.isArray(target[skillful])) {
+        Object.defineProperty(target, skillful, {
+            value: [],
+            enumerable: false,
+        });
+        if (!target[skillful] || !Array.isArray(target[skillful])) {
+            throw new Error(); /// TODO ::: can't mutate it (it's either not extensible or sealed/frozen, or a primitive)
+        }
+    }
+    const skillset = target[skillful];
+    if (force || skill.prerequisites.length > 0) {
+        skill.prerequisites.forEach(requiredSkill => {
+            if (typeof requiredSkill === 'string') {
+
+            }
+        });
+    }
+    return value as any;
 }
+
 export type SkillRequirement = (
-    | PrerequisiteSkill<Skill<any, any>>
     | {
         name: string
         version: SemVerRange | string;
