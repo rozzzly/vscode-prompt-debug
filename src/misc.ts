@@ -1,22 +1,44 @@
-import { BError, WrappedBError } from './compat/BError';
+import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData } from './compat/BError';
+import { deprecate } from 'util';
 
-export type JSONified<T> = (
-    (T extends string | number | boolean | null 
-        ? T
-        : (T extends undefined | Function
-            ? undefined
-            : (T extends { toJSON(): infer R }
-                ? R
-                : (T extends object 
-                    ? JSONifiedObject<T>
-                    : never
+export interface OmittedJSON {
+    functions: boolean;
+    prototype: boolean;
+    symbolKeys: boolean;
+}
+
+export type JSONified<Value, Omitted extends OmittedJSON = { functions: false, prototype: true, symbolKeys: false }> = (
+    (Value extends string | number | boolean | null | undefined
+        ? Value
+        : (Value extends symbol
+            ? string
+            : (Value extends Function
+                ? (Omitted['functions'] extends true
+                    ? undefined
+                    : string
+                ) : (Value extends { toJSON(): infer R }
+                    ? R
+                    : (Value extends Array<any>
+                        ? Value
+                        : (Value extends RegExp | Date
+                            ? string
+                            : (Value extends object
+                                ? JSONifiedObject<Value, Omitted>
+                                : never
+                            )
+                        )
+                    )
                 )
             )
         )
     )
 );
 
-type JSONifiedObject<T extends object> = { [K in keyof T]: JSONified<T[K]> };
+/// TODO ::: obey Omitted.symbolKeys, Omitted.prototype when true
+export type JSONifiedObject<Value extends object, Omitted extends OmittedJSON = { functions: false, prototype: true, symbolKeys: false }> = {
+    [K in keyof Value]: JSONified<Value[K], Omitted>
+};
+
 
 export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
 
@@ -75,15 +97,7 @@ export type FnWithDefault<Fn, DefaultValue> = (
     )
 );
 
-export type RejectionListener<R = any> = (
-    | undefined
-    | ((reason: Rejection<R>) => void)
-);
-
-export type RejectionWrapper<W extends { origin: Error } = { origin: Error }> = (
-    | undefined
-    | Constructor<WrappedBError<W>>
-);
+export type RejectionListener = (reason: Rejection) => void;
 
 export interface WrapDefault {
     <P, D>(
@@ -163,18 +177,18 @@ export function makeSafe<
 export const wrapDefault: WrapDefault = <P, D>(
     operation: Promise<P> | AsyncFn<P>,
     defaultValue: D,
-    callback: RejectionListener = console.warn,
+    callback: RejectionListener | false = console.warn,
     rejectionWrapper?: RejectionWrapper
 ): any => (
     ((typeof operation === 'function')
-        ? (...args: any[]) => (
+        ? (...args: any[]) => ( // operation is AsyncFn
             wrapDefault(
                 operation(...args),
                 defaultValue,
                 callback,
                 rejectionWrapper
             )
-        ) : ((operation)
+        ) : ((operation) // operation is promise
             .then(ret => {
                 if (isRejection(ret)) {
                     return defaultValue;
@@ -190,88 +204,57 @@ export const wrapDefault: WrapDefault = <P, D>(
 export const REJECTABLE: unique symbol = Symbol('RuntimeHint/REJECTABLE'); /// TODO ::: namespace this
 export type REJECTABLE = typeof REJECTABLE;
 
-export const PRIMITIVE_REJECTION: unique symbol = Symbol('RuntimeHint/PRIMITIVE_REJECTION'); /// TODO ::: namespace this
-export type PRIMITIVE_REJECTION = typeof PRIMITIVE_REJECTION;
 
-
-export interface Rejectable {
+export interface Rejection {
     [REJECTABLE]: true;
 }
-export type ExoticRejection<T> = (
-    & T
-    & Rejectable
-);
 
-export type Primitive = (
-    | number
-    | string
-    | null
-    | undefined
-);
-export interface PrimitiveRejection<T extends Primitive> extends Rejectable {
-    [PRIMITIVE_REJECTION]: true;
-    reason: T;
-}
 
-export type Rejection<T> = (
-    (T extends Primitive
-        ? PrimitiveRejection<T>
-        : ExoticRejection<T>
+export type Constructor<I> =  new (...args: any[]) => I;
+export type Instance<C> = C extends new (...args: any[]) => infer I ? I : never;
+export type RejectionWrapper = BError<{ reason: any }>;
+
+export type RejectionOrWrapper<R, W extends RejectionWrapper> = (
+    (R extends Rejection
+        ? R
+        : W
     )
 );
 
-export type Constructor<I = any> = new (...args: any[]) => I;
-export type Instance<C extends Constructor> = C extends new (...args: any[]) => infer I ? I : never;
 
-export function rejectify<T>(value: T, errorWrapper?: RejectionWrapper): Rejection<T>;
-export function rejectify<T extends Primitive>(value: T): Rejection<T>;
-export function rejectify<E extends Error, B extends Constructor<WrappedBError<any>>>(value: E, errorClass: B): B;
-export function rejectify(value: any, errorWrapper?: RejectionWrapper): Rejection<any> {
+export function rejectify<
+    R extends Rejection,
+    W extends RejectionWrapper = GenericRejectionWrapper
+>(value: R, wrapper: Constructor<W>): R;
+export function rejectify<
+    R = Rejection,
+    W extends RejectionWrapper = GenericRejectionWrapper
+>(value: any, wrapper: Constructor<W>): R | W;
+export function rejectify<
+    R = Rejection,
+    W extends RejectionWrapper = GenericRejectionWrapper
+>(value: R, wrapper: Constructor<W> = GenericRejectionWrapper as any): R | W {
     if (isRejection(value)) {
-        return value as any;
+        return value;
     } else {
-        if (isPrimitive(value)) {
-            return {
-                [REJECTABLE]: true,
-                [PRIMITIVE_REJECTION]: true,
-                reason: value
-            };
-        } else if (value instanceof Error && errorWrapper) {
-            return new errorWrapper({ origin: value });
-        } else {
-            value[REJECTABLE] = true;
-            if (value[REJECTABLE] === true) {
-                return value;
-            } else {
-                return {
-                    [REJECTABLE]: true,
-                    [PRIMITIVE_REJECTION]: true,
-                    reason: value
-                };
-            }
-        }
+        return new wrapper({ reason: value });
     }
 }
 
-const isPrimitive = (value: any): value is Primitive => (
-    Object.isFrozen(value)
-);
 
-const isRejection = (value: any): value is Rejectable => (
-    value && value[REJECTABLE] === true
-);
+export function isRejection<R extends Rejection>(value: R): value is R;
+export function isRejection<R extends Rejection = Rejection>(value: any): value is R;
+export function isRejection(value: any): value is Rejection {
+    return (
+        value
+            &&
+        value[REJECTABLE] === true
+    );
+}
 
-const isPrimitiveRejection = (value: any): value is PrimitiveRejection<any> => (
-    isRejection(value) && (value as any)[PRIMITIVE_REJECTION] === true
-);
-
-const isExoticRejection = (value: any): value is PrimitiveRejection<any> => (
-    isRejection(value) && !(value as any)[PRIMITIVE_REJECTION]
-);
-
-export const returnRejection = <P, R, W extends Constructor<WrappedBError<any>>>(
+export const returnRejection = <P, R>(
     promise: Promise<P>,
-    callback: RejectionListener<R> = console.warn,
+    callback: RejectionListener = console.warn,
     rejectionWrapper?: RejectionWrapper
 ): Promise<P | Rejection<R>> => ((promise)
     .catch((e: any) => {
@@ -287,10 +270,20 @@ export interface UnresolvedRaceErrorMeta {
 }
 export class UnresolvedRaceError extends BError<UnresolvedRaceErrorMeta> {
     protected getMessage(): string {
-        return ((this.data.predicate)
+        return ((this.meta.predicate)
             ? 'None of the supplied promises resolved successfully.'
             : 'None of the supplied promises resolved successfully and passed the predicate.'
         );
+    }
+    public toJSON(): ExportedBError<this> {
+        const json = super.toJSON();
+        return {
+            ...json,
+            meta: {
+                ...(json.meta as any),
+                predicate: json.meta.predicate ? json.meta.predicate.toString() : undefined
+            }
+        };
     }
 }
 
@@ -298,7 +291,7 @@ export const predicateRace = <T, R>(
     promises: Promise<T>[],
     predicate: ((v: T) => boolean),
     suppressRejections: boolean = true,
-    callback: RejectionListener<R> = console.warn
+    callback: RejectionListener = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;

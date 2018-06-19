@@ -89,7 +89,7 @@ export class ConfigLookupError extends DisplayableError<ConfigLookupErrorMeta> {
         modal: false
     };
     protected getMessage(): string {
-        return `Could not find key '${this.data.key}' in from the config.`;
+        return `Could not find key '${this.meta.key}' in from the config.`;
     }
 }
 export function objLookup<T = any>(config: object, key: string): T | never;

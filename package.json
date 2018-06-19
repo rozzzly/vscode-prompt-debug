@@ -25,6 +25,7 @@
         "url": "https://github.com/Microsoft/vscode-prompt-debug/issues"
     },
     "dependencies": {
+        "@types/chalk": "^2.2.0",
         "ajv": "^6.4.0",
         "chalk": "^2.4.1",
         "decache": "^4.4.0",
@@ -54,7 +55,7 @@
         "source-map-support": "^0.5.5",
         "ts-jest": "^22.4.5",
         "tslint": "^5.10.0",
-        "typescript": "^3.0.0-dev.20180602"
+        "typescript": "^3.0.0-dev.20180616"
     },
     "scripts": {
         "prepublish": "node ./node_modules/typescript/bin/tsc -p ./",

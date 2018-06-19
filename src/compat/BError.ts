@@ -1,7 +1,8 @@
-import * as chalk from 'chalk';
+import chalk from 'chalk';
 
 import { types } from 'util';
-import { Rejectable, REJECTABLE } from '../misc';
+import { Rejection, REJECTABLE, JSONifiedObject, JSONified, REJECTABLE } from '../misc';
+import { Constructor } from '../../node_modules/make-error';
 
 export const ansiStyleRegex: RegExp = /(\u001b\[(?:\d+;)*\d+m)/u;
 export const stripAnsiEscapes = (str: string): string => (
@@ -12,25 +13,23 @@ export const stripAnsiEscapes = (str: string): string => (
         )
     ), '')
 );
-export type ExportedBError<B extends BError<any>> = (
-    (B['origin'] extends Error
-        ? { origin: B['origin'] }
-        : { }
-    ) & {
-        stack?: string;
-        name: B['name'];
-        timestamp: Date;
-        message: string;
-        detail: string;
-    };
-)
 
-export abstract class BError<D extends {} = {}> extends Error implements Rejectable {
+export type ExportedBError<B extends BError> = JSONified<{
+    origin: B['origin']
+    stack?: string;
+    meta: B['meta'];
+    name: string;
+    timestamp: Date;
+    message: string;
+    detail: string;
+}>;
+
+export abstract class BError<M extends {} = {}> extends Error implements Rejection {
     public [REJECTABLE]: true = true;
     public timestamp: Date;
     public name: string;
 
-    public data: D;
+    public meta: M;
     public origin?: Error;
     public stack?: string;
     public message: string;
@@ -40,13 +39,13 @@ export abstract class BError<D extends {} = {}> extends Error implements Rejecta
     public detailColor: string;
     // public detailCSS: string;
 
-    public constructor(data: D, origin?: Error) {
+    public constructor(data: M, origin?: Error) {
         super('UNIMPLEMENTED'); // NOTE: message might be undefined but will be set later with `this.getMessage()`
         // make sure Error type displays correctly
         this.name = this.constructor.name;
         this.timestamp = new Date();
 
-        // ensure stack trace gets in there
+        // use origin's stack trace if possible
         if (origin && BError.isError(origin)) {
             this.origin = origin;
             if (origin.stack) {
@@ -62,7 +61,7 @@ export abstract class BError<D extends {} = {}> extends Error implements Rejecta
             }
         }
 
-        this.data = this.expandMeta(data);
+        this.meta = this.expandMeta(data, this.origin);
         this.message = this.getMessage(this.origin);
         this.detail = this.getDetail(this.origin);
 
@@ -76,35 +75,36 @@ export abstract class BError<D extends {} = {}> extends Error implements Rejecta
             this.detailColor = this.detail;
             this.detail = stripAnsiEscapes(this.detail);
         } else {
-            this.detailColor = chalk.warn(this.detail);
+            this.detailColor = chalk.yellow(this.detail);
         }
-
-        
-        // adopt origin error's stack if it's set
-        
     }
+    protected abstract getMessage(origin: this['origin']): string;
 
-    protected abstract getMessage(origin?: Error): string;
-
-    public export<D extends Partial<D>>(color: boolean = false ): ExportedBError<this> {
-
+    /// TODO ::: write a serializer
+    public toJSON(): ExportedBError<this> {
         return {
-            ...this.data as any
+            stack: this.stack,
+            name: this.name,
+            origin: ((this.origin && (this.origin as any).toJSON)
+                ? (this.origin as any).toJSON()
+                : this.origin
+            ),
+            timestamp: this.timestamp.toUTCString(),
+            message: this.message,
+            detail: this.detail,
+            meta: this.meta as any
         };
-    }
-    public toJSON() {
-        return this.export(false);
     }
 
     public toString(color: boolean = false): string {
-        return Object.toString.call(this);
+        return JSON.stringify(this.toJSON());
     }
 
-    protected getDetail(origin?: Error): string {-
+    protected getDetail(origin: this['origin']): string {
         return this.message;
     }
 
-    protected expandMeta(meta: D, origin?: Error): D {
+    protected expandMeta(meta: M, origin: this['origin']): M {
         return meta as any;
     }
 
@@ -130,4 +130,33 @@ BError.prototype = Object.create(Error.prototype);
 BError.prototype.constructor = BError;
 Object.assign(BError.prototype, definitions);
 
+export interface RejectionMetaData {
+    reason: any;
+}
 
+export class GenericRejectionWrapper extends BError<RejectionMetaData> {
+    public constructor(meta: RejectionMetaData, origin?: Error) {
+        super({
+            reason: ((meta.reason)
+                ? meta.reason
+                : ((origin !== undefined)
+                    ? origin
+                    : meta.reason
+                )
+            )
+        }, ((origin === undefined && BError.isError(meta.reason))
+            ? meta.reason
+            : origin
+        ));
+    }
+    protected getMessage(origin?: Error): string {
+        return 'Promise was rejected';
+    }
+    public getDetail(origin?: Error) {
+        return ((origin)
+            ? `Promise rejected with an ${origin.name}: "${origin.message}"`
+            : `Promise rejected with reason: "${this.meta.reason}"`
+        );
+    }
+
+}
