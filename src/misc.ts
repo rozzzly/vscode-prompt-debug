@@ -1,5 +1,7 @@
 import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData } from './compat/BError';
-import { deprecate } from 'util';
+import { BaseError } from '../node_modules/make-error';
+
+
 
 export interface OmittedJSON {
     functions: boolean;
@@ -97,7 +99,56 @@ export type FnWithDefault<Fn, DefaultValue> = (
     )
 );
 
-export type RejectionListener = (reason: Rejection) => void;
+export type StringKeys<T> = Extract<keyof T, string>;
+export type MakeOptional<T, K extends keyof T> = (
+    Pick<T, Exclude<keyof T, K>>
+    // & {
+    //     [O in K] +?: T[O]
+    // }
+);
+
+
+export type BaseDrains = (
+    | 'catchAll'
+    | 'discard'
+);
+
+export type NamedDrains<Names extends string> = (
+    BaseDrains | Names
+);
+
+export type DrainBank<Names extends string> = {
+    [Name in Names]: Drain<Name, Names>;
+};
+
+export type DrainBankDefinition<CustomNames extends string> = {
+    [Name in CustomNames]?: Drain<Name, NamedDrains<CustomNames>>;
+};
+
+
+
+export interface Drain<Name extends string, Names extends string = string> {
+    name: Name;
+    <L extends Loggable>(reason: L, drains: DrainBank<Names>): void;
+}
+
+export type Sink<CustomNames extends string> = {
+    drains: DrainBank<NamedDrains<CustomNames>>;
+    safe<P>(promise: Promise<P>): P;
+    safe<P, N extends NamedDrains<CustomNames>>(promise: Promise<P>, drain: N): P;
+    safe<P, D extends Drain<any, CustomNames>>(promise: Promise<P>, drain: D): P;
+};
+
+export function Sink<B extends DrainBankDefinition<any>>(bank: B): Sink<StringKeys<B>> {
+    return undefined as any;
+}
+
+const drained = Sink({ foo() });
+drained.drains.discard()
+drained.drains.
+drained.safe(Promise.resolve(), (...args: any[]) => { return; });
+drained.drains.foo()
+drained.discard(undefined as any, )
 
 export interface WrapDefault {
     <P, D>(
@@ -107,12 +158,12 @@ export interface WrapDefault {
     <P, D, R = any>(
         promise: Promise<P>,
         defaultValue: D,
-        callback?: RejectionListener<R>
+        callback?: Drain<R>
     ): Promise<P | D>;
     <P, D, W extends { origin: Error } = { origin: Error }>(
         promise: Promise<P>,
         defaultValue: D,
-        callback?: RejectionListener<W>,
+        callback?: Drain<W>,
         rejectionWrapper?: RejectionWrapper<W>
     ): Promise<P | D>;
     <F extends AsyncFn, D>(
@@ -122,12 +173,12 @@ export interface WrapDefault {
     <F extends AsyncFn, D, R = any>(
         asyncFunc: F,
         defaultValue: D,
-        callback: RejectionListener<R>
+        callback: Drain<R>
     ): AsyncFnWithDefault<F, D>;
     <F extends AsyncFn, D, W extends { origin: Error } = { origin: Error }>(
         asyncFunc: F,
         defaultValue: D,
-        callback: RejectionListener<W>,
+        callback: Drain<W>,
         rejectionWrapper: RejectionWrapper<W>
     ): AsyncFnWithDefault<F, D>;
 }
@@ -138,11 +189,11 @@ export interface CustomSafeAsyncFunc<Fn extends AsyncFn> {
     ): AsyncFnWithDefault<Fn, DefaultValue>;
     <DefaultValue, R = any>(
         defaultValue: DefaultValue,
-        callback: RejectionListener<R>
+        callback: Drain<R>
     ): AsyncFnWithDefault<Fn, DefaultValue>;
     <DefaultValue, W extends { origin: Error } = { origin: Error }>(
         defaultValue: DefaultValue,
-        callback: RejectionListener<W>,
+        callback: Drain<W>,
         rejectionWrapper: RejectionWrapper<W>
     ): AsyncFnWithDefault<Fn, DefaultValue>;
 }
@@ -177,7 +228,7 @@ export function makeSafe<
 export const wrapDefault: WrapDefault = <P, D>(
     operation: Promise<P> | AsyncFn<P>,
     defaultValue: D,
-    callback: RejectionListener | false = console.warn,
+    callback: Drain | false = console.warn,
     rejectionWrapper?: RejectionWrapper
 ): any => (
     ((typeof operation === 'function')
@@ -190,7 +241,7 @@ export const wrapDefault: WrapDefault = <P, D>(
             )
         ) : ((operation) // operation is promise
             .then(ret => {
-                if (isRejection(ret)) {
+                if (isRejectable(ret)) {
                     return defaultValue;
                 } else {
                     return ret;
@@ -203,9 +254,14 @@ export const wrapDefault: WrapDefault = <P, D>(
 
 export const REJECTABLE: unique symbol = Symbol('RuntimeHint/REJECTABLE'); /// TODO ::: namespace this
 export type REJECTABLE = typeof REJECTABLE;
+export const LOGGABLE: unique symbol = Symbol('RuntimeHint/LOGGABLE'); /// TODO ::: namespace this
+export type LOGGABLE = typeof LOGGABLE;
 
+export interface Loggable {
+    [REJECTABLE]: true;
+}
 
-export interface Rejection {
+export interface Rejectable extends Loggable {
     [REJECTABLE]: true;
 }
 
@@ -214,27 +270,20 @@ export type Constructor<I> =  new (...args: any[]) => I;
 export type Instance<C> = C extends new (...args: any[]) => infer I ? I : never;
 export type RejectionWrapper = BError<{ reason: any }>;
 
-export type RejectionOrWrapper<R, W extends RejectionWrapper> = (
-    (R extends Rejection
-        ? R
-        : W
-    )
-);
-
 
 export function rejectify<
-    R extends Rejection,
+    R extends Rejectable,
     W extends RejectionWrapper = GenericRejectionWrapper
 >(value: R, wrapper: Constructor<W>): R;
 export function rejectify<
-    R = Rejection,
+    R = Rejectable,
     W extends RejectionWrapper = GenericRejectionWrapper
 >(value: any, wrapper: Constructor<W>): R | W;
 export function rejectify<
-    R = Rejection,
+    R = Rejectable,
     W extends RejectionWrapper = GenericRejectionWrapper
 >(value: R, wrapper: Constructor<W> = GenericRejectionWrapper as any): R | W {
-    if (isRejection(value)) {
+    if (isRejectable(value)) {
         return value;
     } else {
         return new wrapper({ reason: value });
@@ -242,21 +291,33 @@ export function rejectify<
 }
 
 
-export function isRejection<R extends Rejection>(value: R): value is R;
-export function isRejection<R extends Rejection = Rejection>(value: any): value is R;
-export function isRejection(value: any): value is Rejection {
+
+export function isLoggable<L extends Loggable>(value: L): value is L;
+export function isLoggable<L extends Loggable = Loggable>(value: any): value is L;
+export function isLoggable(value: any): value is Loggable {
     return (
         value
+            &&
+        value[LOGGABLE] === true
+    );
+}
+
+export function isRejectable<R extends Rejectable>(value: R): value is R;
+export function isRejectable<R extends Rejectable = Rejectable>(value: any): value is R;
+export function isRejectable(value: any): value is Rejectable {
+    return (
+        isLoggable(value)
             &&
         value[REJECTABLE] === true
     );
 }
 
+
 export const returnRejection = <P, R>(
     promise: Promise<P>,
-    callback: RejectionListener = console.warn,
+    callback: Drain = console.warn,
     rejectionWrapper?: RejectionWrapper
-): Promise<P | Rejection<R>> => ((promise)
+): Promise<P | Rejectable<R>> => ((promise)
     .catch((e: any) => {
         const rejection = rejectify(e, rejectionWrapper);
         if (callback) callback(rejection);
@@ -291,7 +352,7 @@ export const predicateRace = <T, R>(
     promises: Promise<T>[],
     predicate: ((v: T) => boolean),
     suppressRejections: boolean = true,
-    callback: RejectionListener = console.warn
+    callback: Drain = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
@@ -299,7 +360,7 @@ export const predicateRace = <T, R>(
             Promise.all(promises.map(promise => (
                 returnRejection(promise, callback)
                     .then(v => {
-                        if (!isRejection(v) && predicate(v)) {
+                        if (!isRejectable(v) && predicate(v)) {
                             resolved = true;
                             resolve(v);
                         }
@@ -330,14 +391,14 @@ export const predicateRace = <T, R>(
 
 export const rejectionRace = <T, R>(
     promises: Promise<T>[],
-    callback: RejectionListener = console.warn
+    callback: Drain = console.warn
 ): Promise<T> => (
     new Promise((resolve, reject) => {
         let resolved: boolean = false;
         Promise.all(promises.map(promise => (
             returnRejection(promise, callback)
                 .then(v => {
-                    if (!isRejection(v)) {
+                    if (!isRejectable(v)) {
                         resolved = true;
                         resolve(v);
                     }
