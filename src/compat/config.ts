@@ -1,5 +1,6 @@
 import * as JSON6 from 'json-6';
 import * as path from 'path';
+import chalk from 'chalk';
 
 import { isPlainObject } from 'lodash';
 import {
@@ -13,6 +14,7 @@ import { readFile, dirExists, fileExists } from '../fsTools';
 import { PREFIX, NO_ARG, NO_RESULT } from '../constants';
 import { isMultiRootSupported } from '../compat';
 import { DisplayableError, DisplayableErrorOpts, DisplayableErrorOptions } from './message';
+import { BError } from './BError';
 
 export function getConfig(resource?: Uri): WorkspaceConfiguration {
     if (resource && isMultiRootSupported) {
@@ -25,15 +27,27 @@ export function getConfig(resource?: Uri): WorkspaceConfiguration {
 export let userConfigUri: Uri | null = null;
 
 
-export class DerivationError extends DisplayableError {
-    protected [DisplayableErrorOpts]: {
+export interface DerivationErrorMeta {
+    what?: string;
+    why?: string;
+}
 
-    };
-    
-    protected getMessage(): string {
-        throw new Error('Method not implemented.');
+export class DerivationError extends BError<DerivationErrorMeta> {
+
+    protected getMessage(origin?: Error): string {
+        let ret = chalk.red('Failed to derive ');
+        if (this.data.what) {
+            ret += chalk.cyan(`'${this.data.what}'`);
+        } else {
+            ret += chalk.red('a value');
+        }
+        if (this.data.why) {
+            ret += ` because '${chalk.yellow(this.data.why)}'.`;
+        } else {
+            ret += chalk.red('.');
+        }
+        return ret;
     }
-
 
 }
 
