@@ -117,33 +117,40 @@ export type NamedDrains<Names extends string> = (
     BaseDrains | Names
 );
 
+// export type DrainBank<Names extends string> = {
+//     [Name in Names]: Drain<Name, Names>;
+// };
 export type DrainBank<Names extends string> = {
-    [Name in Names]: Drain<Name, Names>;
-};
-
-export type DrainBankDefinition<CustomNames extends string> = {
-    [Name in CustomNames]?: Drain<Name, NamedDrains<CustomNames>>;
+    [Name in Names]: Drain<NamedDrains<Names>>;
 };
 
 
 
-export interface Drain<Name extends string, Names extends string = string> {
-    name: Name;
-    <L extends Loggable>(reason: L, drains: DrainBank<Names>): void;
+export interface Drain<Names extends string = string> {
+    <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
+    <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
+    <T extends Notable | Rejectable = Notable | Rejectable>(reason: T, drains: DrainBank<Names>): void;
 }
 
-export type Sink<CustomNames extends string> = {
-    drains: DrainBank<NamedDrains<CustomNames>>;
+export interface Sink<Names extends string> {
+    drains: DrainBank<NamedDrains<Names>>;
     safe<P>(promise: Promise<P>): P;
-    safe<P, N extends NamedDrains<CustomNames>>(promise: Promise<P>, drain: N): P;
-    safe<P, D extends Drain<any, CustomNames>>(promise: Promise<P>, drain: D): P;
+    safe<P, Name extends NamedDrains<Names>>(promise: Promise<P>, drain: Name): P;
+    safe<P, CustomDrain extends Drain<Names>>(promise: Promise<P>, drain: CustomDrain): P;
 };
 
-export function Sink<B extends DrainBankDefinition<any>>(bank: B): Sink<StringKeys<B>> {
+export interface SinkRouter<Names extends string> {
+    <N extends Notable = Notable>(item: Notable, drains: DrainBank<NamedDrains<Names>>): void | NamedDrains<Names> | Drain;
+    <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<NamedDrains<Names>>):  void | NamedDrains<Names> | Drain;
+    <T extends Notable | Rejectable = Notable | Rejectable>(reason: T, drains: DrainBank<Names>):  void | NamedDrains<Names> | Drain;
+}
+export function Sink<Names extends string>(bank: DrainBank<Names>, router: SinkRouter<Names>): Sink<Names> {
     return undefined as any;
 }
 
-const drained = Sink({ foo() });
+const drained = Sink({ foo() { return false; } }, (item) => {
+    return ''
+});
 drained.drains.discard()
 drained.drains.
 drained.safe(Promise.resolve(), (...args: any[]) => { return; });
@@ -254,14 +261,27 @@ export const wrapDefault: WrapDefault = <P, D>(
 
 export const REJECTABLE: unique symbol = Symbol('RuntimeHint/REJECTABLE'); /// TODO ::: namespace this
 export type REJECTABLE = typeof REJECTABLE;
-export const LOGGABLE: unique symbol = Symbol('RuntimeHint/LOGGABLE'); /// TODO ::: namespace this
-export type LOGGABLE = typeof LOGGABLE;
+export const NOTABLE: unique symbol = Symbol('RuntimeHint/NOTABLE'); /// TODO ::: namespace this
+export type NOTABLE = typeof NOTABLE;
 
-export interface Loggable {
+
+export type NoteLevel = (
+    | 'info'
+    | 'warn'
+    | 'debug'
+    | 'error'
+);
+
+export interface Notable {
     [REJECTABLE]: true;
+    timestamp: Date;
+    level: NoteLevel;
+    message: string;
+    messageColor: string;
+
 }
 
-export interface Rejectable extends Loggable {
+export interface Rejectable extends Notable {
     [REJECTABLE]: true;
 }
 
@@ -278,7 +298,7 @@ export function rejectify<
 export function rejectify<
     R = Rejectable,
     W extends RejectionWrapper = GenericRejectionWrapper
->(value: any, wrapper: Constructor<W>): R | W;
+>(value: unknown, wrapper: Constructor<W>): R | W;
 export function rejectify<
     R = Rejectable,
     W extends RejectionWrapper = GenericRejectionWrapper
@@ -292,13 +312,13 @@ export function rejectify<
 
 
 
-export function isLoggable<L extends Loggable>(value: L): value is L;
-export function isLoggable<L extends Loggable = Loggable>(value: any): value is L;
-export function isLoggable(value: any): value is Loggable {
+export function isLoggable<L extends Notable>(value: L): value is L;
+export function isLoggable<L extends Notable = Notable>(value: any): value is L;
+export function isLoggable(value: any): value is Notable {
     return (
         value
             &&
-        value[LOGGABLE] === true
+        value[NOTABLE] === true
     );
 }
 
@@ -331,7 +351,7 @@ export interface UnresolvedRaceErrorMeta {
 }
 export class UnresolvedRaceError extends BError<UnresolvedRaceErrorMeta> {
     protected getMessage(): string {
-        return ((this.meta.predicate)
+        return ((this.data.predicate)
             ? 'None of the supplied promises resolved successfully.'
             : 'None of the supplied promises resolved successfully and passed the predicate.'
         );

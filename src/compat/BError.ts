@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 import { types } from 'util';
-import { Rejection, REJECTABLE, JSONifiedObject, JSONified, REJECTABLE } from '../misc';
+import { Rejectable, REJECTABLE, JSONifiedObject, JSONified, REJECTABLE, NOTABLE, Note, NoteLevel } from '../misc';
 import { Constructor } from '../../node_modules/make-error';
 
 export const ansiStyleRegex: RegExp = /(\u001b\[(?:\d+;)*\d+m)/u;
@@ -14,22 +14,26 @@ export const stripAnsiEscapes = (str: string): string => (
     ), '')
 );
 
+
+
 export type ExportedBError<B extends BError> = JSONified<{
     origin: B['origin']
     stack?: string;
-    meta: B['meta'];
+    meta: B['data'];
     name: string;
     timestamp: Date;
     message: string;
     detail: string;
 }>;
 
-export abstract class BError<M extends {} = {}> extends Error implements Rejection {
+export abstract class BError<D extends {} = {}> extends Error implements Note, Rejectable {
+    public [NOTABLE]: true = true;
     public [REJECTABLE]: true = true;
-    public timestamp: Date;
     public name: string;
 
-    public meta: M;
+    public data: D;
+    public level: NoteLevel = 'error';
+    public timestamp: Date;
     public origin?: Error;
     public stack?: string;
     public message: string;
@@ -39,7 +43,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
     public detailColor: string;
     // public detailCSS: string;
 
-    public constructor(data: M, origin?: Error) {
+    public constructor(data: D, origin?: Error) {
         super('UNIMPLEMENTED'); // NOTE: message might be undefined but will be set later with `this.getMessage()`
         // make sure Error type displays correctly
         this.name = this.constructor.name;
@@ -61,7 +65,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
             }
         }
 
-        this.meta = this.expandMeta(data, this.origin);
+        this.data = this.expandData(data, this.origin);
         this.message = this.getMessage(this.origin);
         this.detail = this.getDetail(this.origin);
 
@@ -69,7 +73,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
             this.messageColor = this.message;
             this.message = stripAnsiEscapes(this.message);
         } else {
-            this.messageColor = chalk.red(this.message)
+            this.messageColor = chalk.red(this.message);
         }
         if (ansiStyleRegex.test(this.detail)) {
             this.detailColor = this.detail;
@@ -92,7 +96,7 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
             timestamp: this.timestamp.toUTCString(),
             message: this.message,
             detail: this.detail,
-            meta: this.meta as any
+            meta: this.data as any
         };
     }
 
@@ -104,15 +108,15 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
         return this.message;
     }
 
-    protected expandMeta(meta: M, origin: this['origin']): M {
-        return meta as any;
+    protected expandData(data: D, origin: this['origin']): D {
+        return data as any;
     }
 
     // public [ inspect.custom ](): string {
     //     return 'customized stack traces/etc';
     // }
 
-    public static isError<E extends Error>(value: any): value is E {
+    public static isError<E extends Error>(value: unknown): value is E {
         return (
             value instanceof Error
             ||
@@ -120,10 +124,11 @@ export abstract class BError<M extends {} = {}> extends Error implements Rejecti
         );
     }
 
-    public static isBError<B extends BError>(value: any): value is B {
+    public static isBError<B extends BError>(value: unknown): value is B {
         return value instanceof BError;
     }
 }
+
 
 const { ...definitions } = BError.prototype;
 BError.prototype = Object.create(Error.prototype);
@@ -155,7 +160,7 @@ export class GenericRejectionWrapper extends BError<RejectionMetaData> {
     public getDetail(origin?: Error) {
         return ((origin)
             ? `Promise rejected with an ${origin.name}: "${origin.message}"`
-            : `Promise rejected with reason: "${this.meta.reason}"`
+            : `Promise rejected with reason: "${this.data.reason}"`
         );
     }
 
