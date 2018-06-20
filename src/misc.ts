@@ -114,43 +114,60 @@ export type BaseDrains = (
 );
 
 export type NamedDrains<Names extends string> = (
-    BaseDrains | Names
+    (string extends Names
+        ? BaseDrains
+        : BaseDrains | Names
+    )
 );
 
-// export type DrainBank<Names extends string> = {
-//     [Name in Names]: Drain<Name, Names>;
-// };
-export interface DrainBank2 {
-    [N: string]: Drain<StringKeys<this>>;
-    discard?: Drain<StringKeys<this>>;
-    catchAll?: Drain<StringKeys<this>>;
+
+export type ExtractNames<Bank extends DrainBank<string>> = (
+    (Bank extends DrainBank<infer Names>
+        ? NamedDrains<Names>
+        : BaseDrains
+    )
+);
+export type DrainBank<Names extends string> = {
+    [Name in Names]: Drain<Names>;
+};
+// export interface DrainBank2 {
+//     [N: string]: Drain<StringKeys<this>>;
+//     // catchAll?: Drain<StringKeys<this>>;
+// }
+
+
+
+export interface Drain<Names extends string> {
+    <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
+    <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
+    <T extends Notable | Rejectable = Notable | Rejectable>(reason: T, drains: DrainBank<Names>): void;
 }
 
-
-
-export interface Drain<Names extends string = string> {
-    <N extends Notable = Notable>(item: Notable, drains: DrainBank2<Names>): void;
-    <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank2<Names>): void;
-    <T extends Notable | Rejectable = Notable | Rejectable>(reason: T, drains: DrainBank2<Names>): void;
-}
-
-export interface Sink<Bank extends DrainBank2> {
-    drains: Bank;
+export interface Sink<Names extends string> {
+    drains: DrainBank<Names>;
     safe<P>(promise: Promise<P>): P;
-    safe<P, Name extends keyof Bank>(promise: Promise<P>, drain: Name): P;
-    safe<P, CustomDrain extends Drain<keyof Bank>>(promise: Promise<P>, drain: CustomDrain): P;
+    safe<P, Name extends Names>(promise: Promise<P>, drain: Name): P;
+    safe<P, CustomDrain extends Drain<Names>>(promise: Promise<P>, drain: CustomDrain): P;
 }
 
-export interface SinkRouter<Bank extends DrainBank2> {
-    <N extends Notable = Notable>(note: N, drains: Bank): void | keyof Bank | Drain<keyof Bank>;
-    <R extends Rejectable = Rejectable>(reason: R, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
-}
-export function Sinked<CustomDrains extends DrainBank2>(bank: CustomDrains, router: SinkRouter<CustomDrains>): Sink<CustomDrains> {
+// export interface SinkRouter<Bank extends DrainBank2> {
+//     <N extends Notable = Notable>(note: N, drains: Bank): void | keyof Bank | Drain<keyof Bank>;
+//     <R extends Rejectable = Rejectable>(reason: R, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
+//     <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
+// }
+export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains): Sink<ExtractNames<CustomDrains>> {
     return undefined as any;
 }
 
-const drained = Sinked(false);
+const drained = Sinked({ foo: () => {
+}});
+drained.safe(Promise.resolve(3), (item: Notable, bank) => {
+
+});
+
+
+
+
 
 
 
