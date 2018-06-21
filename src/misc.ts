@@ -1,5 +1,7 @@
 import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData } from './compat/BError';
 import { BaseError } from '../node_modules/make-error';
+import { Writable } from 'stream';
+import { writeFileAsync } from '../node_modules/@types/fs-extra-promise';
 
 
 
@@ -109,8 +111,9 @@ export type MakeOptional<T, K extends keyof T> = (
 
 
 export type BaseDrains = (
+    | 'smother'
     | 'catchAll'
-    | 'discard'
+    | 'interceptAll'
 );
 
 export type NamedDrains<Names extends string> = (
@@ -130,40 +133,70 @@ export type ExtractNames<Bank extends DrainBank<string>> = (
 export type DrainBank<Names extends string> = {
     [Name in Names]: Drain<Names>;
 };
-// export interface DrainBank2 {
-//     [N: string]: Drain<StringKeys<this>>;
-//     // catchAll?: Drain<StringKeys<this>>;
-// }
-
-
 
 export interface Drain<Names extends string> {
-    <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
-    <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
-    <T extends Notable | Rejectable = Notable | Rejectable>(reason: T, drains: DrainBank<Names>): void;
+    // <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
+    // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): void | Drain<Names> | Writable;
 }
 
 export interface Sink<Names extends string> {
     drains: DrainBank<Names>;
-    safe<P>(promise: Promise<P>): P;
-    safe<P, Name extends Names>(promise: Promise<P>, drain: Name): P;
-    safe<P, CustomDrain extends Drain<Names>>(promise: Promise<P>, drain: CustomDrain): P;
+    passThru<P>(promise: Promise<P>): Promise<P>;
+    passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P>;
+    passThru<P>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P>;
+    passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P>;
+    fallback<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
+    fallback<P, D>(promise: Promise<P>, defaultValue: D, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
+    fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names): Promise<P | D>;
+    fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
+    fallbackSilent<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
+    paired<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
+    paired<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+    paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<[P, null] | [null, R]>;
+    paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+    pairedSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
+    pairedSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+    either<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
+    either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P | R>;
+    either<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
+    either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
+    eitherSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
+    eitherSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
 }
 
-// export interface SinkRouter<Bank extends DrainBank2> {
-//     <N extends Notable = Notable>(note: N, drains: Bank): void | keyof Bank | Drain<keyof Bank>;
-//     <R extends Rejectable = Rejectable>(reason: R, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
-//     <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: Bank):  void | keyof Bank | Drain<keyof Bank>;
-// }
-export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains): Sink<ExtractNames<CustomDrains>> {
+export interface SinkRouter<Names extends string> {
+    // <N extends Notable = Notable>(note: N, drains: DrainBank<Names>): void | Names | Drain<Names>;
+    // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>):  void | Names | Drain<Names>;
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): void | keyof Names | Drain<Names> | Writable;
+}
+
+export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
+    type Names = ExtractNames<CustomDrains>;
+    const _bank: DrainBank<Names> = {
+        interceptAll: (note) => {
+            return; // noop
+        },
+        catchAll: (note) => {
+            console.log(note);
+        },
+        smother: () => {
+            return; // noop
+        },
+        ...(bank as any)
+    };
+
+    const _safe = <P>(promise: Promise<P>) => {
+
+    };
     return undefined as any;
 }
 
-const drained = Sinked({ foo: () => {
-}});
-drained.safe(Promise.resolve(3), (item: Notable, bank) => {
-
-});
+const drained = Sinked({
+    'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
+    'stdout:console.log': (note) => console.log(note)
+}, (note, sink) => {
+})
 
 
 
