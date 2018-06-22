@@ -190,12 +190,23 @@ export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrain
         },
         ...(bank as any)
     };
+    const pickDrain = (drain: Names | Drain<Names> = _bank.catchAll) => {
+        if (typeof drain === 'string') {
+            if (_bank && )
+        } else if (drain && typeof drain === 'function') {
+
+        } else {
+            throw new TypeError();
+        }
+    };
 
     const passThru = <P>(promise: Promise<P>) => {
 
     };
     return undefined as any;
 }
+
+c
 
 const drained = Sinked({
     'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
