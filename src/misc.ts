@@ -43,7 +43,12 @@ export type JSONifiedObject<Value extends object, Omitted extends OmittedJSON = 
     [K in keyof Value]: JSONified<Value[K], Omitted>
 };
 
-
+export type ReturnType<Func> = (
+    (Func extends (...args: any[]) => infer R
+        ? R
+        : never
+    )
+)
 export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
 
 export type AsyncFnWithDefault<Fn, DefaultValue> = (
@@ -168,7 +173,7 @@ export interface Sink<Names extends string> {
 export interface SinkRouter<Names extends string> {
     // <N extends Notable = Notable>(note: N, drains: DrainBank<Names>): void | Names | Drain<Names>;
     // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>):  void | Names | Drain<Names>;
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): void | keyof Names | Drain<Names> | Writable;
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): keyof Names | Drain<Names> | Writable;
 }
 
 export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
@@ -186,7 +191,7 @@ export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrain
         ...(bank as any)
     };
 
-    const _safe = <P>(promise: Promise<P>) => {
+    const passThru = <P>(promise: Promise<P>) => {
 
     };
     return undefined as any;
@@ -196,11 +201,58 @@ const drained = Sinked({
     'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
     'stdout:console.log': (note) => console.log(note)
 }, (note, sink) => {
+    return sink.catchAll;
 })
 
+export function OverlordFuture(...args: any[]): any {
+    return;
+}
+
+Overlord([
+    [args => {
+        if (args.length === 2) {
+            return {
+                firstName: args[0] as string,
+                lastName: args[1] as string
+            };
+        } else return false;
+    }, (z) => {
+        return;
+    }]
+])
 
 
+export type ArgsTest<DestructedArgs extends {}> = (args: any[]) => false | DestructedArgs;
+export type OverloadSignature<
+    Test extends ArgsTest<any>,
+    Destructed extends Exclude<ReturnType<Test>, false>,
+    Implementation extends ((destructed: Destructed) => any)
+> = (
+    [Test, Implementation]
+);
+export function Overlord<T extends ArgsTest<{}>, D extends Exclude<ReturnType<T>, false>, I extends ((dest: D) => any)>(signatures: OverloadSignature<T, D, I>[]): any {
+    if (!Array.isArray(signatures) || !signatures.length) {
+        throw new TypeError(); /// TODO ::: create OverloadSignatureError
+    }
+    let foundFallback: boolean = false;
+    for (let i = 0; i < signatures.length; i++) {
+        const [cond, func] = signatures[i];
+        if (cond === 'fallback') {
+            if (!Array.isArray(0signatures) || !signatures.length) {
+                throw new TypeErro0r(); /// TODO ::: create OverloadSignatureError
+            }
+            if (foundFallback === true) {
+                throw new TypeError(); /// TODO ::: create OverloadSignatureError
+            } else {
+                foundFallback = true;
+            }
+        } else if (!cond || typeof cond !== 'function') {
+            throw new TypeError(); /// TODO ::: create OverloadSignatureError
+        }
+    }
 
+
+}
 
 
 

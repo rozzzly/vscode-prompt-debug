@@ -26,7 +26,7 @@ export function getConfig(resource?: Uri): WorkspaceConfiguration {
 
 export let userConfigUri: Uri | null = null;
 
-
+const overlord = undefined as any;
 export interface DerivationErrorMeta {
     what?: string;
     why?: string;
@@ -35,6 +35,17 @@ export interface DerivationErrorMeta {
 export class DerivationError extends BError<DerivationErrorMeta> {
 
     protected getMessage(origin?: Error): string {
+        overlord([
+            (args: any[]) =>  args.length === 0,
+            ([]) => {
+                
+            }
+        ], [
+            overlord.count(2),
+            ([firstName, lastName]: [string, string]) => {
+                console.log(`name is ${firstName} ${lastName}`)
+            }
+        ])
         let ret = chalk.red('Failed to derive ');
         if (this.data.what) {
             ret += chalk.cyan(`'${this.data.what}'`);
