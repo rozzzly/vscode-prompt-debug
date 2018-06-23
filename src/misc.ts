@@ -121,152 +121,128 @@ export type BaseDrains = (
     | 'interceptAll'
 );
 
-export type NamedDrains<Names extends string> = (
-    (string extends Names
+export type NamedDrains<Bank> = (
+    (string extends StringKeys<Bank>
         ? BaseDrains
-        : BaseDrains | Names
+        : BaseDrains | StringKeys<Bank>
     )
 );
 
 
-export type ExtractNames<Bank extends DrainBank<string>> = (
-    (Bank extends DrainBank<infer Names>
-        ? NamedDrains<Names>
-        : BaseDrains
-    )
-);
-export type DrainBank<Names extends string> = {
-    [Name in Names]: Drain<Names>;
+// export type ExtractNames<Bank extends DrainBank<any> = (
+//     (Bank extends DrainBank<infer Names>
+//         ? NamedDrains<Names>
+//         : BaseDrains
+//     )
+// );
+
+
+// export interface Drain2<Names extends string> {
+//     // <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
+//     // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
+//     <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): void | Drain<Names> | Writable;
+// }
+
+// export interface Sink2<Names extends string> {
+//     drains: DrainBank<Names>;
+//     passThru<P>(promise: Promise<P>): Promise<P>;
+//     passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P>;
+//     passThru<P>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P>;
+//     passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P>;
+//     fallback<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
+//     fallback<P, D>(promise: Promise<P>, defaultValue: D, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
+//     fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names): Promise<P | D>;
+//     fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
+//     fallbackSilent<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
+//     paired<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
+//     paired<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+//     paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<[P, null] | [null, R]>;
+//     paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+//     pairedSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
+//     pairedSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
+//     either<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
+//     either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P | R>;
+//     either<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
+//     either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
+//     eitherSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
+//     eitherSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
+// }
+
+export interface Drain<Names extends string = string> {
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): void | Writable;
+}
+
+
+export type DrainSet<Names extends string> = {
+    [KnownDrain in Names]: Drain<Names>;
 };
 
-export interface Drain<Names extends string> {
-    // <N extends Notable = Notable>(item: Notable, drains: DrainBank<Names>): void;
-    // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>): void;
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): void | Drain<Names> | Writable;
+export interface DrainBank {
+    [X: string]: Drain<NamedDrains<keyof this>>;
 }
 
-export interface Sink<Names extends string> {
-    drains: DrainBank<Names>;
-    passThru<P>(promise: Promise<P>): Promise<P>;
-    passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P>;
-    passThru<P>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P>;
-    passThru<P>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P>;
-    fallback<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
-    fallback<P, D>(promise: Promise<P>, defaultValue: D, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
-    fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names): Promise<P | D>;
-    fallback<P, D>(promise: Promise<P>, defaultValue: D, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | D>;
-    fallbackSilent<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
-    paired<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
-    paired<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
-    paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<[P, null] | [null, R]>;
-    paired<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
-    pairedSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<[P, null] | [null, R]>;
-    pairedSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<[P, null] | [null, R]>;
-    either<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
-    either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names): Promise<P | R>;
-    either<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
-    either<P, R extends Rejectable>(promise: Promise<P>, drain: Drain<Names> | Names, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
-    eitherSilent<P, R extends Rejectable>(promise: Promise<P>): Promise<P | R>;
-    eitherSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
-}
-
-export interface SinkRouter<Names extends string> {
-    // <N extends Notable = Notable>(note: N, drains: DrainBank<Names>): void | Names | Drain<Names>;
-    // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>):  void | Names | Drain<Names>;
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): keyof Names | Drain<Names> | Writable;
-}
-
-export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
-    type Names = ExtractNames<CustomDrains>;
-    const _bank: DrainBank<Names> = {
-        interceptAll: (note) => {
-            return; // noop
-        },
-        catchAll: (note) => {
-            console.log(note);
-        },
-        smother: () => {
-            return; // noop
-        },
-        ...(bank as any)
-    };
-    const pickDrain = (drain: Names | Drain<Names> = _bank.catchAll) => {
-        if (typeof drain === 'string') {
-            if (_bank && )
-        } else if (drain && typeof drain === 'function') {
-
-        } else {
-            throw new TypeError();
-        }
-    };
-
-    const passThru = <P>(promise: Promise<P>) => {
-
-    };
-    return undefined as any;
-}
-
-c
-
-const drained = Sinked({
-    'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
-    'stdout:console.log': (note) => console.log(note)
-}, (note, sink) => {
-    return sink.catchAll;
-})
-
-export function OverlordFuture(...args: any[]): any {
-    return;
-}
-
-Overlord([
-    [args => {
-        if (args.length === 2) {
-            return {
-                firstName: args[0] as string,
-                lastName: args[1] as string
-            };
-        } else return false;
-    }, (z) => {
-        return;
-    }]
-])
-
-
-export type ArgsTest<DestructedArgs extends {}> = (args: any[]) => false | DestructedArgs;
-export type OverloadSignature<
-    Test extends ArgsTest<any>,
-    Destructed extends Exclude<ReturnType<Test>, false>,
-    Implementation extends ((destructed: Destructed) => any)
-> = (
-    [Test, Implementation]
-);
-export function Overlord<T extends ArgsTest<{}>, D extends Exclude<ReturnType<T>, false>, I extends ((dest: D) => any)>(signatures: OverloadSignature<T, D, I>[]): any {
-    if (!Array.isArray(signatures) || !signatures.length) {
-        throw new TypeError(); /// TODO ::: create OverloadSignatureError
+export class Sinkz<Bank extends DrainBank> {
+    public drains: DrainSet<StringKeys<Bank> | BaseDrains>;
+    public constructor(drains: Bank) {
+        this.drains = drains as any;
     }
-    let foundFallback: boolean = false;
-    for (let i = 0; i < signatures.length; i++) {
-        const [cond, func] = signatures[i];
-        if (cond === 'fallback') {
-            if (!Array.isArray(0signatures) || !signatures.length) {
-                throw new TypeErro0r(); /// TODO ::: create OverloadSignatureError
-            }
-            if (foundFallback === true) {
-                throw new TypeError(); /// TODO ::: create OverloadSignatureError
-            } else {
-                foundFallback = true;
-            }
-        } else if (!cond || typeof cond !== 'function') {
-            throw new TypeError(); /// TODO ::: create OverloadSignatureError
-        }
-    }
-
-
 }
 
+const s2 = new Sinkz({ lol(n: Notable, d) {
+    return new Writable();
+}});
+s2.drains.catchAll({} as any, s2.drains)
 
 
+
+
+
+// export interface SinkRouter<Names extends string> {
+//     // <N extends Notable = Notable>(note: N, drains: DrainBank<Names>): void | Names | Drain<Names>;
+//     // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>):  void | Names | Drain<Names>;
+//     <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): keyof Names | Drain<Names> | Writable;
+// }
+
+// export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
+//     type Names = ExtractNames<CustomDrains>;
+//     const _bank: DrainBank<Names> = {
+//         interceptAll: (note) => {
+//             return; // noop
+//         },
+//         catchAll: (note) => {
+//             console.log(note);
+//         },
+//         smother: () => {
+//             return; // noop
+//         },
+//         ...(bank as any)
+//     };
+//     const pickDrain = (drain: Names | Drain<Names> = _bank.catchAll) => {
+//         if (typeof drain === 'string') {
+//             if (_bank && )
+//         } else if (drain && typeof drain === 'function') {
+
+//         } else {
+//             throw new TypeError();
+//         }
+//     };
+
+//     const passThru = <P>(promise: Promise<P>) => {
+
+//     };
+//     return undefined as any;
+// }
+
+// c
+
+// const drained = Sinked({
+//     'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
+//     'stdout:console.log': (note) => console.log(note)
+// }, (note, sink) => {
+//     return sink.catchAll;
+// });
+
+// drained
 
 export interface WrapDefault {
     <P, D>(
