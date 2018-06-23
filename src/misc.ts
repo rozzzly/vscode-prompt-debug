@@ -181,27 +181,35 @@ export interface DrainBank {
     [X: string]: Drain<NamedDrains<keyof this>>;
 }
 
-export class Sinkz<Bank extends DrainBank> {
+export class Sink<Bank extends DrainBank> {
     public drains: DrainSet<StringKeys<Bank> | BaseDrains>;
-    public constructor(drains: Bank) {
+    public constructor(drains: Bank, router: SinkRouter<StringKeys<Bank> | BaseDrains>) {
         this.drains = drains as any;
     }
 }
 
-const s2 = new Sinkz({ lol(n: Notable, d) {
-    return new Writable();
-}});
+const s2 = new Sink({
+    derp: (n: Rejectable, d) => {
+        return;
+    },
+    lol(n: Notable, d) {
+        return new Writable();
+    }
+}, (note, z) => {
+    z.
+    return ((note2, z2) => {
+        return;
+    });
+});
 s2.drains.catchAll({} as any, s2.drains)
 
 
 
 
 
-// export interface SinkRouter<Names extends string> {
-//     // <N extends Notable = Notable>(note: N, drains: DrainBank<Names>): void | Names | Drain<Names>;
-//     // <R extends Rejectable = Rejectable>(reason: R, drains: DrainBank<Names>):  void | Names | Drain<Names>;
-//     <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainBank<Names>): keyof Names | Drain<Names> | Writable;
-// }
+export interface SinkRouter<Names extends string> {
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): Names | Drain | Writable;
+}
 
 // export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
 //     type Names = ExtractNames<CustomDrains>;
