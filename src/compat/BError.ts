@@ -1,23 +1,24 @@
 import chalk from 'chalk';
 
 import { types } from 'util';
-import { Rejectable, REJECTABLE, JSONifiedObject, JSONified, REJECTABLE, NOTABLE, Note, NoteLevel } from '../misc';
+import { Rejectable, JSONifiedObject, JSONified, REJECTABLE, NOTABLE, NoteLevel } from '../misc';
 import { Constructor } from '../../node_modules/make-error';
 
 export const ansiStyleRegex: RegExp = /(\u001b\[(?:\d+;)*\d+m)/u;
 export const stripAnsiEscapes = (str: string): string => (
-    str.split(ansiStyleRegex).reduce((reduction, part) => (
-        ((ansiStyleRegex.test(part))
-            ? reduction
-            : reduction + part
-        )
-    ), '')
+    ((str)
+        .split(ansiStyleRegex)
+        .reduce((reduction, part) => (
+            ((ansiStyleRegex.test(part))
+                ? reduction
+                : reduction + part
+            )
+        ), '')
+    )
 );
 
-
-
 export type ExportedBError<B extends BError> = JSONified<{
-    origin: B['origin']
+    origin: B['origin'];
     stack?: string;
     meta: B['data'];
     name: string;
@@ -61,7 +62,7 @@ export abstract class BError<D extends {} = {}> extends Error implements Note, R
             if (Error.captureStackTrace) {
                 Error.captureStackTrace(this, this.constructor);
             } else {
-                this.stack = (new Error()).stack;
+                this.stack = new Error().stack;
             }
         }
 
@@ -89,10 +90,7 @@ export abstract class BError<D extends {} = {}> extends Error implements Note, R
         return {
             stack: this.stack,
             name: this.name,
-            origin: ((this.origin && (this.origin as any).toJSON)
-                ? (this.origin as any).toJSON()
-                : this.origin
-            ),
+            origin: this.origin && (this.origin as any).toJSON ? (this.origin as any).toJSON() : this.origin,
             timestamp: this.timestamp.toUTCString(),
             message: this.message,
             detail: this.detail,
@@ -117,18 +115,13 @@ export abstract class BError<D extends {} = {}> extends Error implements Note, R
     // }
 
     public static isError<E extends Error>(value: unknown): value is E {
-        return (
-            value instanceof Error
-            ||
-            types.isNativeError(value)
-        );
+        return value instanceof Error || types.isNativeError(value);
     }
 
     public static isBError<B extends BError>(value: unknown): value is B {
         return value instanceof BError;
     }
 }
-
 
 const { ...definitions } = BError.prototype;
 BError.prototype = Object.create(Error.prototype);
@@ -138,30 +131,25 @@ Object.assign(BError.prototype, definitions);
 export interface RejectionMetaData {
     reason: any;
 }
-
 export class GenericRejectionWrapper extends BError<RejectionMetaData> {
     public constructor(meta: RejectionMetaData, origin?: Error) {
-        super({
-            reason: ((meta.reason)
-                ? meta.reason
-                : ((origin !== undefined)
-                    ? origin
-                    : meta.reason
-                )
-            )
-        }, ((origin === undefined && BError.isError(meta.reason))
-            ? meta.reason
-            : origin
-        ));
+        super(
+            {
+                reason: meta.reason ? meta.reason : origin !== undefined ? origin : meta.reason
+            },
+            origin === undefined && BError.isError(meta.reason) ? meta.reason : origin
+        );
     }
     protected getMessage(origin?: Error): string {
         return 'Promise was rejected';
     }
     public getDetail(origin?: Error) {
-        return ((origin)
+        return origin
             ? `Promise rejected with an ${origin.name}: "${origin.message}"`
-            : `Promise rejected with reason: "${this.data.reason}"`
-        );
+            : `Promise rejected with reason: "${this.data.reason}"`;
     }
+}
 
+export class FilterRejectionWrapper extends GenericRejectionWrapper {
+    
 }

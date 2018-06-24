@@ -1,4 +1,4 @@
-import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData } from './compat/BError';
+import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData, FilterRejectionWrapper } from './compat/BError';
 import { BaseError } from '../node_modules/make-error';
 import { Writable } from 'stream';
 import { writeFileAsync } from '../node_modules/@types/fs-extra-promise';
@@ -121,13 +121,6 @@ export type BaseDrains = (
     | 'interceptAll'
 );
 
-export type NamedDrains<Bank> = (
-    (string extends StringKeys<Bank>
-        ? BaseDrains
-        : BaseDrains | StringKeys<Bank>
-    )
-);
-
 
 // export type ExtractNames<Bank extends DrainBank<any> = (
 //     (Bank extends DrainBank<infer Names>
@@ -168,89 +161,108 @@ export type NamedDrains<Bank> = (
 //     eitherSilent<P, R extends Rejectable>(promise: Promise<P>, defaultWrapper: Constructor<Rejectable>): Promise<P | R>;
 // }
 
-export interface Drain<Names extends string = string> {
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): void | Writable;
-}
 
+export type NamedDrains<Names extends string = BaseDrains> = (
+    | Names
+    | BaseDrains
+);
+
+export type ExtractNamedDrains<Bank> = (
+    (string extends StringKeys<Bank>
+        ? NamedDrains
+        : NamedDrains<StringKeys<Bank>>
+    )
+);
 
 export type DrainSet<Names extends string> = {
     [KnownDrain in Names]: Drain<Names>;
 };
 
 export interface DrainBank {
-    [X: string]: Drain<NamedDrains<keyof this>>;
+    [X: string]: Drain<keyof this>; // use of StringKeys is important here because it 
+}
+
+export type Drain<Names extends string = string> = (
+    | {
+        <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): void;
+    }
+    | null
+);
+
+
+
+export type Outlet<Bank extends DrainBank> = (
+    | Drain // includes | null
+    | (
+        | StringKeys<Bank>
+        | BaseDrains
+    )
+    | undefined
+);
+
+export interface SinkRouter<Names extends string> {
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): null | Names | Drain | Writable;
 }
 
 export class Sink<Bank extends DrainBank> {
     public drains: DrainSet<StringKeys<Bank> | BaseDrains>;
+    private router: SinkRouter<StringKeys<Bank> | BaseDrains>;
     public constructor(drains: Bank, router: SinkRouter<StringKeys<Bank> | BaseDrains>) {
-        this.drains = drains as any;
+        this.drains = {
+            interceptAll: null,
+            catchAll: (note) => {
+                console.log(note);
+            },
+            ...drains as any,
+            smother: null, // ensure smother is never overwritten
+        };
+        this.router = router;
     }
+
+    public drain(note: Notable | Rejectable, outlet: Outlet<Bank>): void {
+        // let drain: Drain = null;
+        
+        // if (typeof outlet === 'function') {
+        //     drain = outlet;
+        // } else if {
+
+        // }
+
+        
+        // if (this.drains.interceptAll !== null) {
+        //     this.drains.interceptAll(note, this.drains);
+        // }
+    }
+
+    public passThru<P>(promise: Promise<P>): Promise<P>;
+    public passThru<P>(promise: Promise<P>, opts?: {
+         drain?: Drain | (StringKeys<Bank> | BaseDrains);
+         defaultWrapper?: Constructor<RejectionWrapper>;
+    }): Promise<P>;
+    public passThru<P>(promise: Promise<P>, opts: {
+        drain?: Drain | (StringKeys<Bank> | BaseDrains);
+        defaultWrapper: Constructor<RejectionWrapper>;
+   } = { defaultWrapper: GenericRejectionWrapper }): Promise<P> {
+       return promise.catch(reason => {
+            const rejection = rejectify(reason, opts.defaultWrapper);
+            this.drain(rejection, opts.drain);
+            throw rejection;
+       });
+   }
 }
 
 const s2 = new Sink({
-    derp: (n: Rejectable, d) => {
+    derp: (n, d) => {
         return;
     },
-    lol(n: Notable, d) {
+    lol(n, d) {
         return new Writable();
     }
 }, (note, z) => {
-    z.
-    return ((note2, z2) => {
-        return;
-    });
+    return 'lol';
 });
-s2.drains.catchAll({} as any, s2.drains)
 
 
-
-
-
-export interface SinkRouter<Names extends string> {
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): Names | Drain | Writable;
-}
-
-// export function Sinked<CustomDrains extends DrainBank<string>>(bank: CustomDrains, router: SinkRouter<ExtractNames<CustomDrains>>): Sink<ExtractNames<CustomDrains>> {
-//     type Names = ExtractNames<CustomDrains>;
-//     const _bank: DrainBank<Names> = {
-//         interceptAll: (note) => {
-//             return; // noop
-//         },
-//         catchAll: (note) => {
-//             console.log(note);
-//         },
-//         smother: () => {
-//             return; // noop
-//         },
-//         ...(bank as any)
-//     };
-//     const pickDrain = (drain: Names | Drain<Names> = _bank.catchAll) => {
-//         if (typeof drain === 'string') {
-//             if (_bank && )
-//         } else if (drain && typeof drain === 'function') {
-
-//         } else {
-//             throw new TypeError();
-//         }
-//     };
-
-//     const passThru = <P>(promise: Promise<P>) => {
-
-//     };
-//     return undefined as any;
-// }
-
-// c
-
-// const drained = Sinked({
-//     'fs:accessLog': (note) => { writeFileAsync('./accessLog.txt', note); },
-//     'stdout:console.log': (note) => console.log(note)
-// }, (note, sink) => {
-//     return sink.catchAll;
-// });
-
-// drained
 
 export interface WrapDefault {
     <P, D>(
@@ -365,10 +377,11 @@ export type NoteLevel = (
     | 'warn'
     | 'debug'
     | 'error'
+    | 'plain'
 );
 
 export interface Notable {
-    [REJECTABLE]: true;
+    [NOTABLE]: true;
     timestamp: Date;
     level: NoteLevel;
     message: string;
@@ -382,22 +395,22 @@ export interface Rejectable extends Notable {
 
 
 export type Constructor<I> =  new (...args: any[]) => I;
-export type Instance<C> = C extends new (...args: any[]) => infer I ? I : never;
 export type RejectionWrapper = BError<{ reason: any }>;
 
-
+export function rejectify<
+    R extends Rejectable
+>(value: R): R;
 export function rejectify<
     R extends Rejectable,
-    W extends RejectionWrapper = GenericRejectionWrapper
->(value: R, wrapper: Constructor<W>): R;
+    W extends RejectionWrapper
+>(value: R, wrapper: Constructor<W>): R | W;
+export function rejectify(value: unknown): Rejectable | GenericRejectionWrapper;
 export function rejectify<
-    R = Rejectable,
-    W extends RejectionWrapper = GenericRejectionWrapper
->(value: unknown, wrapper: Constructor<W>): R | W;
+    W extends RejectionWrapper
+>(value: unknown, wrapper: Constructor<W>): Rejectable | W;
 export function rejectify<
-    R = Rejectable,
-    W extends RejectionWrapper = GenericRejectionWrapper
->(value: R, wrapper: Constructor<W> = GenericRejectionWrapper as any): R | W {
+    W extends RejectionWrapper
+>(value: unknown, wrapper: Constructor<W> = GenericRejectionWrapper as any): Rejectable | W {
     if (isRejectable(value)) {
         return value;
     } else {
@@ -405,11 +418,9 @@ export function rejectify<
     }
 }
 
-
-
-export function isLoggable<L extends Notable>(value: L): value is L;
-export function isLoggable<L extends Notable = Notable>(value: any): value is L;
-export function isLoggable(value: any): value is Notable {
+export function isNotable<L extends Notable>(value: L): value is L;
+export function isNotable<L extends Notable = Notable>(value: any): value is L;
+export function isNotable(value: any): value is Notable {
     return (
         value
             &&
@@ -421,7 +432,7 @@ export function isRejectable<R extends Rejectable>(value: R): value is R;
 export function isRejectable<R extends Rejectable = Rejectable>(value: any): value is R;
 export function isRejectable(value: any): value is Rejectable {
     return (
-        isLoggable(value)
+        isNotable(value)
             &&
         value[REJECTABLE] === true
     );
