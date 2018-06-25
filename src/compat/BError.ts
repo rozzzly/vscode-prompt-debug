@@ -141,7 +141,7 @@ export class GenericRejectionWrapper extends BError<RejectionMetaData> {
         );
     }
     protected getMessage(origin?: Error): string {
-        return 'Promise was rejected';
+        return 'Promise was rejected!';
     }
     public getDetail(origin?: Error) {
         return origin
@@ -150,6 +150,13 @@ export class GenericRejectionWrapper extends BError<RejectionMetaData> {
     }
 }
 
-export class FilterRejectionWrapper extends GenericRejectionWrapper {
-    
+export class SyncRejectionWrapper extends GenericRejectionWrapper {
+    protected getMessage(origin?: Error): string {
+        return 'Function call threw a rejection!';
+    }
+    public getDetail(origin?: Error) {
+        return origin
+            ? `Function call rejected with an ${origin.name}: "${origin.message}"`
+            : `Function call rejected with reason: "${this.data.reason}"`;
+    }
 }

@@ -1,8 +1,4 @@
-import { BError, ExportedBError, GenericRejectionWrapper, RejectionMetaData, FilterRejectionWrapper } from './compat/BError';
-import { BaseError } from '../node_modules/make-error';
-import { Writable } from 'stream';
-import { writeFileAsync } from '../node_modules/@types/fs-extra-promise';
-
+import { BError, ExportedBError, GenericRejectionWrapper, SyncRejectionWrapper } from './compat/BError';
 
 
 export interface OmittedJSON {
@@ -43,13 +39,19 @@ export type JSONifiedObject<Value extends object, Omitted extends OmittedJSON = 
     [K in keyof Value]: JSONified<Value[K], Omitted>
 };
 
-export type ReturnType<Func> = (
-    (Func extends (...args: any[]) => infer R
-        ? R
-        : never
+export type ReturnType<Fn> = (
+    (Fn extends (...args: any[]) => Promise<infer P>
+        ? P
+        : (Fn extends (...args: any[]) => infer R
+            ? R
+            : never
+        )
     )
-)
-export type AsyncFn<P = any> = (...args: any[]) => Promise<P>;
+);
+
+export type SyncFn<R = any> = (...args: any[]) => R;
+
+export type AsyncFn<R = any> = (...args: any[]) => Promise<R>;
 
 export type AsyncFnWithDefault<Fn, DefaultValue> = (
     (Fn extends () => Promise<infer T>
@@ -78,7 +80,7 @@ export type AsyncFnWithDefault<Fn, DefaultValue> = (
         )
     )
 );
-export type FnWithDefault<Fn, DefaultValue> = (
+export type SyncFnWithDefault<Fn, DefaultValue> = (
     (Fn extends () => infer T
         ? () => T | DefaultValue
         : (Fn extends (a: infer A) => infer T
@@ -105,6 +107,61 @@ export type FnWithDefault<Fn, DefaultValue> = (
         )
     )
 );
+export type AsyncFnOverwriteReturn<Fn, R> = (
+    (Fn extends () => Promise<any>
+        ? () => Promise<R>
+        : (Fn extends (a: infer A) => Promise<any>
+            ? (a: A) => Promise<R>
+            : (Fn extends (a: infer A, b: infer B) => Promise<any>
+                ? (a: A, b: B) => Promise<R>
+                : (Fn extends (a: infer A, b: infer B, C: infer C) => Promise<any>
+                    ? (a: A, b: B, c: C) => Promise<R>
+                    : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D) => Promise<any>
+                        ? (a: A, b: B, c: C, d: D) => Promise<R>
+                        : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E) => Promise<any>
+                            ? (a: A, b: B, c: C, d: D, e: E) => Promise<R>
+                            : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E, f: infer F) => Promise<any>
+                                ? (a: A, b: B, c: C, d: D, e: E, f: F) => Promise<R>
+                                : (Fn extends (...n: (infer N)[]) => Promise<any>
+                                    ? (...n: N[]) => Promise<R>
+                                    : never
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+);
+export type SyncFnOverwriteReturn<Fn, R> = (
+    (Fn extends () => any
+        ? () => R
+        : (Fn extends (a: infer A) => any
+            ? (a: A) => R
+            : (Fn extends (a: infer A, b: infer B) => any
+                ? (a: A, b: B) => R
+                : (Fn extends (a: infer A, b: infer B, C: infer C) => any
+                    ? (a: A, b: B, c: C) => R
+                    : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D) => any
+                        ? (a: A, b: B, c: C, d: D) => R
+                        : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E) => any
+                            ? (a: A, b: B, c: C, d: D, e: E) => R
+                            : (Fn extends (a: infer A, b: infer B, c: infer C, d: infer D, e: infer E, f: infer F) => any
+                                ? (a: A, b: B, c: C, d: D, e: E, f: F) => R
+                                : (Fn extends (...n: (infer N)[]) => any
+                                    ? (...n: N[]) => R
+                                    : never
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+);
+
 
 export type StringKeys<T> = Extract<keyof T, string>;
 export type MakeOptional<T, K extends keyof T> = (
@@ -113,14 +170,6 @@ export type MakeOptional<T, K extends keyof T> = (
     //     [O in K] +?: T[O]
     // }
 );
-
-
-export type BaseDrains = (
-    | 'smother'
-    | 'catchAll'
-    | 'interceptAll'
-);
-
 
 // export type ExtractNames<Bank extends DrainBank<any> = (
 //     (Bank extends DrainBank<infer Names>
@@ -162,107 +211,411 @@ export type BaseDrains = (
 // }
 
 
-export type NamedDrains<Names extends string = BaseDrains> = (
-    | Names
-    | BaseDrains
-);
-
-export type ExtractNamedDrains<Bank> = (
-    (string extends StringKeys<Bank>
-        ? NamedDrains
-        : NamedDrains<StringKeys<Bank>>
-    )
-);
-
 export type DrainSet<Names extends string> = {
     [KnownDrain in Names]: Drain<Names>;
 };
 
 export interface DrainBank {
-    [X: string]: Drain<keyof this>; // use of StringKeys is important here because it 
+    [X: string]: Drain;
 }
 
-export type Drain<Names extends string = string> = (
-    | {
-        <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): void;
-    }
-    | null
+export interface Drain<Names extends string = string> {
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): void;
+}
+
+
+export type BaseDrains = (
+    | 'smother'
+    | 'catchAll'
+    | 'interceptAll'
+);
+
+export type NamedDrains<Names> = (
+    (string extends Names
+        ? BaseDrains
+        : BaseDrains | Names
+    )
 );
 
 
-
 export type Outlet<Bank extends DrainBank> = (
-    | Drain // includes | null
+    | Drain
     | (
         | StringKeys<Bank>
         | BaseDrains
     )
-    | undefined
+    | undefined // shortcut to router
 );
 
 export interface SinkRouter<Names extends string> {
-    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): null | Names | Drain | Writable;
+    <T extends Notable | Rejectable = Notable | Rejectable>(note: T, drains: DrainSet<Names>): undefined | Names | Drain;
 }
 
+const noop: Drain = (note, drains) => {
+    // noop();
+};
 export class Sink<Bank extends DrainBank> {
     public drains: DrainSet<StringKeys<Bank> | BaseDrains>;
     private router: SinkRouter<StringKeys<Bank> | BaseDrains>;
     public constructor(drains: Bank, router: SinkRouter<StringKeys<Bank> | BaseDrains>) {
         this.drains = {
-            interceptAll: null,
-            catchAll: (note) => {
-                console.log(note);
-            },
+            interceptAll: noop,
+            catchAll: noop,
             ...drains as any,
-            smother: null, // ensure smother is never overwritten
+            smother: noop // ensure smother is never overwritten
         };
         this.router = router;
     }
 
-    public drain(note: Notable | Rejectable, outlet: Outlet<Bank>): void {
-        // let drain: Drain = null;
-        
-        // if (typeof outlet === 'function') {
-        //     drain = outlet;
-        // } else if {
 
-        // }
+    public reboundSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn
+    ): SyncFnWithDefault<Fn, R>;
+    public reboundSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): SyncFnWithDefault<Fn, R>;
+    public reboundSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: SyncRejectionWrapper }
+    ): SyncFnWithDefault<Fn, R> {
+        return ((...args: any[]): ReturnType<Fn> | R => {
+            try {
+                const result = operation(...args);
+                return result;
+            } catch (reason) {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                return rejection;
+            }
+        }) as SyncFnWithDefault<Fn, R>;
+    }
 
-        
-        // if (this.drains.interceptAll !== null) {
-        //     this.drains.interceptAll(note, this.drains);
-        // }
+
+    public rebound<P, R extends Rejectable = GenericRejectionWrapper>(
+        promise: Promise<P>
+    ): Promise<P | R>;
+    public rebound<Fn extends AsyncFn, R extends Rejectable = GenericRejectionWrapper>(
+        operation: Fn,
+    ): AsyncFnWithDefault<Fn, R>;
+    public rebound<P, R extends Rejectable = GenericRejectionWrapper>(
+        promise: Promise<P>,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Promise<P | R>;
+    public rebound<Fn extends AsyncFn, R extends Rejectable = GenericRejectionWrapper>(
+        operation: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): AsyncFnWithDefault<Fn, R>;
+    public rebound<P, Fn extends AsyncFn<P>, R extends Rejectable = GenericRejectionWrapper>(
+        operation: Promise<P> | Fn,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: GenericRejectionWrapper }
+    ): Promise<P | R> | AsyncFnWithDefault<Fn, R> {
+        if (typeof operation === 'function') {
+            return (async (...args: any[]): Promise<P | R> => {
+                try {
+                    const result = await operation(...args);
+                    return result;
+                } catch (reason) {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    return rejection;
+                }
+            }) as AsyncFnWithDefault<Fn, R>;
+        } else {
+            return ((operation)
+                .catch(reason => {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    return rejection;
+                })
+            );
+        }
+    }
+
+
+    public eitherSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn
+    ): SyncFnOverwriteReturn<Fn, [ReturnType<Fn>, null] | [null, R]>;
+    public eitherSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): SyncFnOverwriteReturn<Fn, [ReturnType<Fn>, null] | [null, R]>;
+    public eitherSync<Fn extends SyncFn, R extends Rejectable = SyncRejectionWrapper>(
+        operation: Fn,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = {
+            defaultWrapper: SyncRejectionWrapper
+        }
+    ): SyncFnOverwriteReturn<Fn, [ReturnType<Fn>, null] | [null, R]> {
+        return ((...args: any[]): [ReturnType<Fn>, null] | [null, R] => {
+            try {
+                const result = operation(...args);
+                return [result, null] as [ReturnType<Fn>, null];
+            } catch (reason) {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                return [null, rejection] as [null, R];
+            }
+        }) as SyncFnOverwriteReturn<Fn, [ReturnType<Fn>, null] | [null, R]>;
+    }
+
+    public either<P, R extends Rejectable = GenericRejectionWrapper>(
+        promise: Promise<P>
+    ): Promise<[P, null] | [null, R]>;
+    public either<P, R extends Rejectable = GenericRejectionWrapper>(
+        promise: Promise<P>,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Promise<[P, null] | [null, R]>;
+    public either<P, Fn extends AsyncFn<P>, R extends Rejectable = GenericRejectionWrapper>(
+        operation: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): AsyncFnOverwriteReturn<Fn, [P, null] | [null, R]>;
+    public either<P, Fn extends AsyncFn<P>, R extends Rejectable = GenericRejectionWrapper>(
+        operation: Promise<P> | Fn,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: GenericRejectionWrapper }
+    ): Promise<[P, null] | [null, R]> | AsyncFnOverwriteReturn<Fn, [P, null] | [null, R]> {
+        if (typeof operation === 'function') {
+            return (async (...args: any[]): Promise<[P, null] | [null, R]> => {
+                try {
+                    const result = await operation(...args);
+                    return [result, null] as [P, null];
+                } catch (reason) {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    return [null, rejection] as [null, R];
+                }
+            }) as AsyncFnOverwriteReturn<Fn, [P, null] | [null, R]>;
+        } else {
+            return ((operation)
+                .then(p => [p, null] as [P, null])
+                .catch(reason => {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    return [null, rejection] as [null, R];
+                })
+            );
+        }
+    }
+
+
+    public fallbackSync<Fn extends SyncFn, D>(operation: Fn, defaultValue: D): SyncFnWithDefault<Fn, D>;
+    public fallbackSync<Fn extends SyncFn, D>(
+        operation: Fn,
+        defaultValue: D,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): SyncFnWithDefault<Fn, D>;
+    public fallbackSync<Fn extends SyncFn, D>(
+        operation: Fn,
+        defaultValue: D,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: SyncRejectionWrapper }
+    ): SyncFnWithDefault<Fn, D> {
+        return ((...args: any[]): any => {
+            try {
+                const result = operation(...args);
+                return result;
+            } catch (reason) {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                return defaultValue;
+            }
+        }) as SyncFnWithDefault<Fn, D>;
+    }
+
+    public fallback<P, D>(promise: Promise<P>, defaultValue: D): Promise<P | D>;
+    public fallback<Fn extends AsyncFn, D>(operation: Fn, defaultValue: D): AsyncFnWithDefault<Fn, D>;
+    public fallback<P, D>(
+        promise: Promise<P>,
+        defaultValue: D,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Promise<P | D>;
+    public fallback<Fn extends AsyncFn, D>(
+        operation: Fn,
+        defaultValue: D,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): AsyncFnWithDefault<Fn, D>;
+    public fallback<P, D>(
+        operation: Promise<P> | AsyncFn<P>,
+        defaultValue: D,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: GenericRejectionWrapper }
+    ): Promise<P | D> | AsyncFn<P | D> {
+        if (typeof operation === 'function') {
+            return async(...args: any[]): Promise<P | D> => {
+                try {
+                    const result = operation(...args);
+                    return result;
+                } catch (reason) {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    return defaultValue;
+                }
+            };
+        } else {
+            return operation.catch(reason => {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                throw rejection;
+            });
+        }
+    }
+
+
+
+    public passThruSync<Fn extends SyncFn>(
+        operation: Fn
+    ): Fn;
+    public passThruSync<Fn extends SyncFn>(
+        operation: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Fn;
+    public passThruSync<Fn extends SyncFn>(
+        operation: Fn,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: SyncRejectionWrapper }
+    ): Fn {
+        return ((...args: any[]): any => {
+            try {
+                const result = operation(...args);
+                return result;
+            } catch (reason) {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                throw rejection;
+            }
+        }) as Fn;
     }
 
     public passThru<P>(promise: Promise<P>): Promise<P>;
-    public passThru<P>(promise: Promise<P>, opts?: {
-         drain?: Drain | (StringKeys<Bank> | BaseDrains);
-         defaultWrapper?: Constructor<RejectionWrapper>;
-    }): Promise<P>;
-    public passThru<P>(promise: Promise<P>, opts: {
-        drain?: Drain | (StringKeys<Bank> | BaseDrains);
-        defaultWrapper: Constructor<RejectionWrapper>;
-   } = { defaultWrapper: GenericRejectionWrapper }): Promise<P> {
-       return promise.catch(reason => {
-            const rejection = rejectify(reason, opts.defaultWrapper);
-            this.drain(rejection, opts.drain);
-            throw rejection;
-       });
+    public passThru<Fn extends AsyncFn>(promise: Fn): Fn;
+    public passThru<P>(
+        promise: Promise<P>,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Promise<P>;
+    public passThru<Fn extends AsyncFn>(
+        promise: Fn,
+        opts?: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper?: Constructor<RejectionWrapper>;
+        }
+    ): Fn;
+    public passThru<P>(
+        operation: Promise<P> | AsyncFn<P>,
+        opts: {
+            drain?: Drain | (StringKeys<Bank> | BaseDrains);
+            defaultWrapper: Constructor<RejectionWrapper>;
+        } = { defaultWrapper: GenericRejectionWrapper }
+    ): Promise<P> | AsyncFn<P> {
+        if (typeof operation === 'function') {
+            return async(...args: any[]): Promise<P> => {
+                try {
+                    const result = await operation(...args);
+                    return result;
+                } catch (reason) {
+                    const rejection = rejectify(reason, opts.defaultWrapper);
+                    this.drain(rejection, opts.drain);
+                    throw rejection;
+                }
+            };
+        } else {
+            return operation.catch(reason => {
+                const rejection = rejectify(reason, opts.defaultWrapper);
+                this.drain(rejection, opts.drain);
+                throw rejection;
+            });
+        }
    }
+
+
+    private drain(note: Notable | Rejectable, outlet?: Outlet<Bank>): void {
+        let routed: Outlet<Bank>;
+        if (outlet === undefined) {
+            routed = this.router(note, this.drains);
+        } else {
+            routed = outlet;
+        }
+
+        if (typeof routed === 'function') {
+            routed(note, this.drains);
+        } else if (routed === undefined) {
+            this.drains.catchAll(note, this.drains);
+        } else if (routed === null) {
+            this.drains.smother(note, this.drains);
+        } else if (typeof routed === 'string') {
+            if (Object.keys(this.drains).includes(routed)) {
+                this.drains[routed](note, this.drains);
+            } else {
+                // do not have a drain by that name
+                /// TODO throw an error instead
+                this.drains.catchAll(note, this.drains);
+            }
+        }
+        if (this.drains.interceptAll !== noop) {
+            this.drains.interceptAll(note, this.drains);
+        }
+    }
 }
 
 const s2 = new Sink({
-    derp: (n, d) => {
-        return;
+    derp(n, d) {
+        return d.foo;
     },
     lol(n, d) {
-        return new Writable();
+        return;
     }
 }, (note, z) => {
-    return 'lol';
+    return z.lol;
 });
-
-
 
 export interface WrapDefault {
     <P, D>(
