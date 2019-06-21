@@ -32,7 +32,7 @@
         "fs-extra-promise": "^1.0.1",
         "json-6": "^1.0.2",
         "lodash": "^4.17.10",
-        "micromatch": "^3.1.10",
+        "micromatch": "^4.0.0",
         "semver": "^5.5.0",
         "ts-json-schema-generator": "^0.25.1",
         "ts-node": "^6.0.3",
