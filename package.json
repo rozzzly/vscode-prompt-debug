@@ -38,7 +38,7 @@
         "ts-node": "^6.0.3",
         "typical-ts": "^0.2.1",
         "vm2": "^3.5.2",
-        "vscode": "^1.1.17"
+        "vscode": "^1.1.35"
     },
     "devDependencies": {
         "@types/ajv": "^1.0.0",
