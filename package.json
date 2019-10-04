@@ -1,105 +1,108 @@
 {
-    "name": "vscode-prompt-debug",
-    "displayName": "VSCode Debug Resolve",
-    "version": "0.0.2",
-    "publisher": "rozzzly-dev",
-    "description": "Extension that allows you quickly launch a vscode debug session for a file of your choice.",
-    "author": {
-        "name": "rozzzly",
-        "email": "pclienau@gmail.com"
+  "name": "vscode-prompt-debug",
+  "displayName": "VSCode Debug Resolve",
+  "version": "0.0.2",
+  "publisher": "rozzzly-dev",
+  "description": "Extension that allows you quickly launch a vscode debug session for a file of your choice.",
+  "author": {
+    "name": "rozzzly",
+    "email": "pclienau@gmail.com"
+  },
+  "engines": {
+    "vscode": "^1.6.0",
+    "node": "^7.4.0"
+  },
+  "icon": "img/icon.svg",
+  "categories": [
+    "Debuggers"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rozzzly/vscode-prompt-debug.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Microsoft/vscode-prompt-debug/issues"
+  },
+  "dependencies": {
+    "@types/chalk": "^2.2.0",
+    "ajv": "^6.4.0",
+    "chalk": "^2.4.1",
+    "decache": "^4.4.0",
+    "fs-extra-promise": "^1.0.1",
+    "json-6": "^1.0.2",
+    "lodash": "^4.17.12",
+    "micromatch": "^4.0.0",
+    "semver": "^5.5.0",
+    "ts-json-schema-generator": "^0.25.1",
+    "ts-node": "^6.0.3",
+    "typical-ts": "^0.2.1",
+    "vm2": "^3.5.2",
+    "vscode": "^1.1.35",
+    "snyk": "^1.230.5"
+  },
+  "devDependencies": {
+    "@types/ajv": "^1.0.0",
+    "@types/fs-extra-promise": "^1.0.5",
+    "@types/jest": "^22.2.3",
+    "@types/lodash": "^4.14.108",
+    "@types/micromatch": "^3.1.0",
+    "@types/node": "^10.0.4",
+    "@types/semver": "^5.5.0",
+    "@types/source-map-support": "^0.4.0",
+    "jest": "^22.4.3",
+    "jest-environment-node": "^22.4.3",
+    "prettier": "^1.12.1",
+    "source-map-support": "^0.5.5",
+    "ts-jest": "^22.4.5",
+    "tslint": "^5.10.0",
+    "typescript": "^3.0.0-dev.20180622"
+  },
+  "scripts": {
+    "prepublish": "npm run snyk-protect && node ./node_modules/typescript/bin/tsc -p ./",
+    "build": "./scripts/generateJsonSchema.sh && node ./node_modules/typescript/bin/tsc -p ./",
+    "watch": "node ./node_modules/typescript/bin/tsc -w -p ./",
+    "test": "node ./node_modules/vscode/bin/test",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "snyk-protect": "snyk protect"
+  },
+  "main": "./out/src/extension",
+  "activationEvents": [
+    "onCommand:prompt-debug.resolveViaGlob",
+    "onCommand:prompt-debug.prompt",
+    "onCommand:prompt-debug.resetHistory",
+    "onCommand:prompt-debug.autoResolve"
+  ],
+  "contributes": {
+    "configuration": {
+      "properties": {
+        "prompt-debug.autoResolveScript": {
+          "description": "A javascript or typescript file which is exports a function named 'autoResolve' that resolves a file path to run.",
+          "title": "Auto Resolve Script",
+          "type": "string",
+          "required": false,
+          "scope": "resource"
+        }
+      }
     },
-    "engines": {
-        "vscode": "^1.6.0",
-        "node": "^7.4.0"
-    },
-    "icon": "img/icon.svg",
-    "categories": [
-        "Debuggers"
-    ],
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/rozzzly/vscode-prompt-debug.git"
-    },
-    "bugs": {
-        "url": "https://github.com/Microsoft/vscode-prompt-debug/issues"
-    },
-    "dependencies": {
-        "@types/chalk": "^2.2.0",
-        "ajv": "^6.4.0",
-        "chalk": "^2.4.1",
-        "decache": "^4.4.0",
-        "fs-extra-promise": "^1.0.1",
-        "json-6": "^1.0.2",
-        "lodash": "^4.17.12",
-        "micromatch": "^4.0.0",
-        "semver": "^5.5.0",
-        "ts-json-schema-generator": "^0.25.1",
-        "ts-node": "^6.0.3",
-        "typical-ts": "^0.2.1",
-        "vm2": "^3.5.2",
-        "vscode": "^1.1.35"
-    },
-    "devDependencies": {
-        "@types/ajv": "^1.0.0",
-        "@types/fs-extra-promise": "^1.0.5",
-        "@types/jest": "^22.2.3",
-        "@types/lodash": "^4.14.108",
-        "@types/micromatch": "^3.1.0",
-        "@types/node": "^10.0.4",
-        "@types/semver": "^5.5.0",
-        "@types/source-map-support": "^0.4.0",
-        "jest": "^22.4.3",
-        "jest-environment-node": "^22.4.3",
-        "prettier": "^1.12.1",
-        "source-map-support": "^0.5.5",
-        "ts-jest": "^22.4.5",
-        "tslint": "^5.10.0",
-        "typescript": "^3.0.0-dev.20180622"
-    },
-    "scripts": {
-        "prepublish": "node ./node_modules/typescript/bin/tsc -p ./",
-        "build": "./scripts/generateJsonSchema.sh && node ./node_modules/typescript/bin/tsc -p ./",
-        "watch": "node ./node_modules/typescript/bin/tsc -w -p ./",
-        "test": "node ./node_modules/vscode/bin/test",
-        "postinstall": "node ./node_modules/vscode/bin/install"
-    },
-    "main": "./out/src/extension",
-    "activationEvents": [
-        "onCommand:prompt-debug.resolveViaGlob",
-        "onCommand:prompt-debug.prompt",
-        "onCommand:prompt-debug.resetHistory",
-        "onCommand:prompt-debug.autoResolve"
-    ],
-    "contributes": {
-        "configuration": {
-            "properties": {
-                "prompt-debug.autoResolveScript": {
-                    "description": "A javascript or typescript file which is exports a function named 'autoResolve' that resolves a file path to run.",
-                    "title": "Auto Resolve Script",
-                    "type": "string",
-                    "required": false,
-                    "scope": "resource"
-                }
-            }
-        },
-        "commands": [
-            {
-                "title": "Launch Debug Session For Current File",
-                "command": "prompt-debug.launchSessionForActiveFile"
-            },
-            {
-                "title": "Launch Debug Session",
-                "command": "prompt-debug.prompt"
-            },
-            {
-                "title": "Clear Saved List of Recently Chosen Files",
-                "command": "prompt-debug.resetHistory"
-            },
-            {
-                "title": "Resolve Targeted File for Debug Session",
-                "command": "prompt-debug.resolveViaGlob"
-            }
-        ]
-    }
+    "commands": [
+      {
+        "title": "Launch Debug Session For Current File",
+        "command": "prompt-debug.launchSessionForActiveFile"
+      },
+      {
+        "title": "Launch Debug Session",
+        "command": "prompt-debug.prompt"
+      },
+      {
+        "title": "Clear Saved List of Recently Chosen Files",
+        "command": "prompt-debug.resetHistory"
+      },
+      {
+        "title": "Resolve Targeted File for Debug Session",
+        "command": "prompt-debug.resolveViaGlob"
+      }
+    ]
+  },
+  "snyk": true
 }
