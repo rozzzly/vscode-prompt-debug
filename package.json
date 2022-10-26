@@ -39,7 +39,7 @@
     "typical-ts": "^0.2.1",
     "vm2": "^3.5.2",
     "vscode": "^1.1.35",
-    "snyk": "^1.230.5"
+    "@snyk/protect": "latest"
   },
   "devDependencies": {
     "@types/ajv": "^1.0.0",
@@ -64,7 +64,7 @@
     "watch": "node ./node_modules/typescript/bin/tsc -w -p ./",
     "test": "node ./node_modules/vscode/bin/test",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "snyk-protect": "snyk protect"
+    "snyk-protect": "snyk-protect"
   },
   "main": "./out/src/extension",
   "activationEvents": [
