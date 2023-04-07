@@ -37,7 +37,7 @@
     "ts-json-schema-generator": "^0.25.1",
     "ts-node": "^6.0.3",
     "typical-ts": "^0.2.1",
-    "vm2": "^3.5.2",
+    "vm2": "^3.9.15",
     "vscode": "^1.1.35",
     "snyk": "^1.230.5"
   },
