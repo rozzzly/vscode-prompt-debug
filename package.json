@@ -33,13 +33,13 @@
     "json-6": "^1.0.2",
     "lodash": "^4.17.12",
     "micromatch": "^4.0.0",
-    "semver": "^5.5.0",
+    "semver": "^7.5.2",
     "ts-json-schema-generator": "^0.25.1",
     "ts-node": "^6.0.3",
     "typical-ts": "^0.2.1",
     "vm2": "^3.5.2",
     "vscode": "^1.1.35",
-    "snyk": "^1.230.5"
+    "snyk": "^1.685.0"
   },
   "devDependencies": {
     "@types/ajv": "^1.0.0",
