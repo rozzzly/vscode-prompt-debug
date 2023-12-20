@@ -39,7 +39,7 @@
     "typical-ts": "^0.2.1",
     "vm2": "^3.5.2",
     "vscode": "^1.1.35",
-    "snyk": "^1.230.5"
+    "snyk": "^1.996.0"
   },
   "devDependencies": {
     "@types/ajv": "^1.0.0",
