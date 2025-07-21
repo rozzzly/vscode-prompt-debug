@@ -34,11 +34,11 @@
     "lodash": "^4.17.12",
     "micromatch": "^4.0.0",
     "semver": "^5.5.0",
-    "ts-json-schema-generator": "^0.25.1",
+    "ts-json-schema-generator": "^2.1.0",
     "ts-node": "^6.0.3",
     "typical-ts": "^0.2.1",
     "vm2": "^3.5.2",
-    "vscode": "^1.1.35",
+    "vscode": "^1.1.37",
     "snyk": "^1.230.5"
   },
   "devDependencies": {
